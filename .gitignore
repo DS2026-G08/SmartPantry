@@ -427,3 +427,28 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+# JetBrains Rider
+**/.idea/
+*.sln.iml
+
+# ABP Studio
+**/.abpstudio/
+**/*.abppkg.analyze.json
+
+# SmartPantry
+src/SmartPantry.Web/Logs/*
+src/SmartPantry.Web.Host/Logs/*
+src/SmartPantry.Web.Public/Logs/*
+src/SmartPantry.Web.Public.Host/Logs/*
+src/SmartPantry.AuthServer/Logs/*
+src/SmartPantry.HttpApi.Host/Logs/*
+src/SmartPantry.DbMigrator/Logs/*
+src/SmartPantry.Blazor.Server/Logs/*
+src/SmartPantry.Blazor.Server.Tiered/Logs/*
+
+# Use abp install-libs to restore.
+**/wwwroot/libs/*
+
+# IdentityServer temp files
+tempkey.rsa
+tempkey.jwk
