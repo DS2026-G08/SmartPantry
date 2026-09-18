@@ -1,0 +1,45 @@
+name: CI SmartPantry
+
+on:
+  push:
+    branches: [ "main", "feature/*" ]
+  pull_request:
+    branches: [ "main", "stg" ]
+
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x' 
+        
+    - name: Build backend
+      run: dotnet build SmartPantry.slnx --configuration Release
+
+    - name: Test backend
+      run: dotnet test SmartPantry.slnx --configuration Release --no-build
+      
+  build-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./angular
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    - name: Install dependencies
+      run: yarn install
+
+    - name: Build frontend
+      run: yarn build
+
+    - name: Run Frontend Tests
+      run: yarn test --watch=false --browsers=ChromeHeadless
