@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest';
 
 describe('frontend test setup', () => {
-  it('should run Vitest successfully', () => {
+  it('should run the frontend test runner successfully', () => {
     expect(true).toBe(true);
   });
 });
