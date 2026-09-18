@@ -50,7 +50,6 @@ public abstract class BookAppService_Tests<TStartupModule>
         result.Name.ShouldBe("New test book 42");
         result.AuthorId.ShouldBe(author.Id);
     }
-}
     
     [Fact]
     public async Task Should_Not_Create_A_Book_Without_Name()
