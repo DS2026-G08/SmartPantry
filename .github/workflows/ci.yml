@@ -18,7 +18,10 @@ jobs:
         dotnet-version: '10.0.x' 
         
     - name: Build backend
-      run: dotnet build SmartPantry.slnx
+      run: dotnet build SmartPantry.slnx --configuration Release
+
+    - name: Test backend
+      run: dotnet test SmartPantry.slnx --configuration Release --no-build
       
   build-frontend:
     runs-on: ubuntu-latest
@@ -34,6 +37,9 @@ jobs:
         node-version: '24'
     - name: Install dependencies
       run: yarn install
-      
+
     - name: Build frontend
       run: yarn build
+
+    - name: Run Frontend Tests
+      run: yarn test --watch=false --browsers=ChromeHeadless
