@@ -16,6 +16,7 @@ using OpenIddict.Server.AspNetCore;
 using SmartPantry.EntityFrameworkCore;
 using SmartPantry.MultiTenancy;
 using SmartPantry.HealthChecks;
+using SmartPantry.ExternalProducts;
 using Microsoft.OpenApi;
 using Volo.Abp;
 using Volo.Abp.Studio;
@@ -103,7 +104,7 @@ public class SmartPantryHttpApiHostModule : AbpModule
             {
                 options.DisableTransportSecurityRequirement = true;
             });
-            
+
             Configure<ForwardedHeadersOptions>(options =>
             {
                 options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
@@ -127,6 +128,14 @@ public class SmartPantryHttpApiHostModule : AbpModule
         ConfigureSwagger(context, configuration);
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
+
+        // Registro del cliente HTTP para Open Food Facts (TP07)
+        context.Services.AddHttpClient<IExternalProductCatalogClient, OpenFoodFactsProductCatalogClient>(client =>
+        {
+            client.BaseAddress = new Uri("https://world.openfoodfacts.org/api/v3/product/");
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.Add("User-Agent", "SmartPantry - UTN FRCU - TP07 - Lautaro Tursi (G08)");
+        });
     }
 
     private void ConfigureStudio(IHostEnvironment hostingEnvironment)
