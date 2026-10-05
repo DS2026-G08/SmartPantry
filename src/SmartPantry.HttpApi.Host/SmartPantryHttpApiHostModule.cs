@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Extensions.DependencyInjection;
 using OpenIddict.Validation.AspNetCore;
 using OpenIddict.Server.AspNetCore;
 using SmartPantry.EntityFrameworkCore;
+using SmartPantry.ExternalProducts;
 using SmartPantry.MultiTenancy;
 using SmartPantry.HealthChecks;
 using Microsoft.OpenApi;
@@ -127,6 +129,7 @@ public class SmartPantryHttpApiHostModule : AbpModule
         ConfigureSwagger(context, configuration);
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
+        ConfigureExternalProductCatalog(context);
     }
 
     private void ConfigureStudio(IHostEnvironment hostingEnvironment)
@@ -245,6 +248,29 @@ public class SmartPantryHttpApiHostModule : AbpModule
                     .AllowAnyMethod()
                     .AllowCredentials();
             });
+        });
+    }
+
+    // TP07: cliente HTTP de Open Food Facts administrado por IHttpClientFactory.
+    // Cuando una clase pide IExternalProductCatalogClient, el contenedor crea
+    // OpenFoodFactsProductCatalogClient y le entrega un HttpClient ya configurado.
+    // La consulta es pública: no hay claves ni credenciales.
+    private static void ConfigureExternalProductCatalog(ServiceConfigurationContext context)
+    {
+        context.Services.AddHttpClient<
+            IExternalProductCatalogClient,
+            OpenFoodFactsProductCatalogClient>(client =>
+        {
+            client.BaseAddress = new Uri("https://world.openfoodfacts.org/api/v3/");
+            client.Timeout = TimeSpan.FromSeconds(15);
+
+            // Open Food Facts exige identificar al cliente y dejar un medio de contacto.
+            client.DefaultRequestHeaders.UserAgent.Add(
+                new ProductInfoHeaderValue("SmartPantry-DS2026-G08", "1.0"));
+            client.DefaultRequestHeaders.UserAgent.Add(
+                new ProductInfoHeaderValue("(+https://github.com/DS2026-G08/SmartPantry)"));
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
         });
     }
 
