@@ -53,3 +53,27 @@ Para verificar que el proyecto compila y pasa las pruebas antes de subir cambios
 **Frontend (Angular):**
 - Compilar: `yarn build`
 - Pruebas: `yarn test --watch=false --browsers ChromeHeadless`
+
+## 🌐 Integración externa: Open Food Facts (TP07)
+
+Primer incremento de **RF-05 (búsqueda por código)**. El backend consulta un producto por código de barras en Open Food Facts (Product Opener API v3) y devuelve un resultado propio.
+
+**Endpoint propio:** `GET /api/app/external-product/by-barcode?Barcode={código}` (8 a 14 dígitos; otro formato devuelve HTTP 400).
+
+| `status` | Significado |
+|---|---|
+| `1` Found | El proveedor devolvió el producto |
+| `2` NotFound | El proveedor no conoce ese código |
+| `3` RateLimited | El proveedor limitó temporalmente las consultas (HTTP 429) |
+| `4` ServiceUnavailable | El proveedor no respondió, tardó demasiado o devolvió un error |
+
+`name`, `brand` e `imageUrl` son opcionales: si Open Food Facts no informa un dato, queda en `null` (RF-09).
+
+**Diseño**
+- `ExternalProductAppService` (Application) depende sólo de `IExternalProductCatalogClient`; no conoce `HttpClient` ni el JSON del proveedor.
+- `OpenFoodFactsProductCatalogClient` (HttpApi.Host) arma la ruta v3, interpreta los códigos HTTP y traduce el JSON al DTO interno.
+- El cliente se registra con `IHttpClientFactory` en `SmartPantryHttpApiHostModule` (URL base, tiempo máximo de espera de 15 s y `User-Agent` identificable).
+- No se usan claves ni credenciales: la consulta es pública.
+- Las pruebas del AppService reemplazan el cliente por un mock (NSubstitute) y no dependen de Internet.
+
+**Todavía no incluido:** búsqueda por texto (RF-06), guardado del producto externo (RF-08), Angular y seguridad de usuarios.
