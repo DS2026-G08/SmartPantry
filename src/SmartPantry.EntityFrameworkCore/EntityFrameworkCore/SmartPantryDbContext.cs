@@ -14,6 +14,7 @@ using Volo.Abp.Identity.EntityFrameworkCore;
 using Volo.Abp.PermissionManagement.EntityFrameworkCore;
 using Volo.Abp.SettingManagement.EntityFrameworkCore;
 using Volo.Abp.OpenIddict.EntityFrameworkCore;
+using SmartPantry.Pantries;
 using SmartPantry.Products;
 
 namespace SmartPantry.EntityFrameworkCore;
@@ -31,6 +32,10 @@ public class SmartPantryDbContext :
     public DbSet<Book> Books { get; set; }
 
     public DbSet<Product> Products { get; set; } = null!;
+
+    public DbSet<Pantry> Pantries { get; set; } = null!;
+
+    public DbSet<PantryItemWarning> PantryItemWarnings { get; set; } = null!;
 
     #region Entities from the modules
 
@@ -119,6 +124,55 @@ public class SmartPantryDbContext :
 
             b.Property(x => x.Barcode)
                 .HasMaxLength(ProductConsts.MaxBarcodeLength);
+        });
+
+        // TP08: modelo mínimo de despensa y advertencias de vencimiento (RF-15)
+        builder.Entity<Pantry>(b =>
+        {
+            b.ToTable(SmartPantryConsts.DbTablePrefix + "Pantries", SmartPantryConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Name)
+                .IsRequired()
+                .HasMaxLength(PantryConsts.MaxNameLength);
+
+            b.HasIndex(x => x.OwnerId);
+
+            b.HasMany(x => x.Items)
+                .WithOne()
+                .HasForeignKey(x => x.PantryId)
+                .IsRequired();
+        });
+
+        builder.Entity<PantryItem>(b =>
+        {
+            b.ToTable(SmartPantryConsts.DbTablePrefix + "PantryItems", SmartPantryConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            // Un producto que está en alguna despensa no se puede borrar.
+            b.HasOne<Product>()
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Filtro que usa el worker en cada ejecución.
+            b.HasIndex(x => new { x.Status, x.ExpirationDate });
+        });
+
+        builder.Entity<PantryItemWarning>(b =>
+        {
+            b.ToTable(SmartPantryConsts.DbTablePrefix + "PantryItemWarnings", SmartPantryConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.HasOne<PantryItem>()
+                .WithMany()
+                .HasForeignKey(x => x.PantryItemId)
+                .IsRequired();
+
+            // Clave lógica: una sola advertencia por ítem y tipo, aunque dos ejecuciones se superpongan.
+            b.HasIndex(x => new { x.PantryItemId, x.Type })
+                .IsUnique();
         });
     }
 }
