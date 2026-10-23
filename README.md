@@ -77,3 +77,29 @@ Primer incremento de **RF-05 (búsqueda por código)**. El backend consulta un p
 - Las pruebas del AppService reemplazan el cliente por un mock (NSubstitute) y no dependen de Internet.
 
 **Todavía no incluido:** búsqueda por texto (RF-06), guardado del producto externo (RF-08), Angular y seguridad de usuarios.
+
+## ⏰ Worker de vencimientos (TP08)
+
+Implementa **RF-15 (tarea periódica)**: un proceso en segundo plano identifica ítems de despensa próximos a vencer y crea o actualiza sus advertencias sin duplicarlas.
+
+**Regla de vencimiento** (`ExpirationRule`)
+- **Umbral: 3 días**, con el día límite incluido. Con hoy = 21/10, un ítem que vence el 24/10 tiene advertencia y uno del 25/10 no.
+- **Vencidos:** mantienen la advertencia activa hasta que se consuman o se corrija la fecha.
+- **Sin fecha o consumidos:** no tienen advertencia; si tenían una, se desactiva.
+- **"Hoy" es la fecha calendario de Argentina** (`America/Argentina/Buenos_Aires`), calculada a partir de la hora UTC del servidor (`ArgentinaCalendar`). Las fechas de vencimiento se guardan como `date`, sin hora.
+
+**Modelo mínimo**
+- `Pantry` (agregado con `OwnerId`) contiene `PantryItem` (producto, estado y fecha de vencimiento opcional).
+- `PantryItemWarning` guarda una advertencia por ítem. Su clave lógica es `PantryItemId + Type`, y la base la refuerza con un **índice único**. La misma fila se actualiza, se desactiva y se reactiva; nunca se crea una segunda.
+- Tablas nuevas: `AppPantries`, `AppPantryItems`, `AppPantryItemWarnings`.
+
+**Diseño**
+- `ExpirationWarningWorker` (Application, `AsyncPeriodicBackgroundWorkerBase`) decide **cuándo** se ejecuta: corre una vez por hora y también al iniciar el Host. En cada ejecución resuelve el servicio desde el alcance propio de esa ejecución, abre una unidad de trabajo y registra los errores sin detener las ejecuciones siguientes.
+- `ExpirationWarningManager` (Domain) decide **qué** advertencias crear, actualizar, reactivar o desactivar. Recibe "hoy" como parámetro, así que se prueba con una fecha controlada y sin esperar el temporizador.
+- El propietario sale de los datos persistidos. El worker no usa `ICurrentUser`, porque en segundo plano no hay sesión HTTP.
+- **Ejecuciones cercanas:** si dos ejecuciones intentan crear la misma advertencia, el índice único rechaza la segunda, esa ejecución se registra como error y la siguiente encuentra la advertencia ya creada.
+- Las pruebas desactivan los background workers (`AbpBackgroundWorkerOptions.IsEnabled = false`), así que CI no espera al worker.
+
+**Datos locales:** al correr `SmartPantry.DbMigrator` se crea una "Despensa de prueba" del usuario `admin`, con un ítem por cada caso de la regla.
+
+**Todavía no incluido:** API para consultar o administrar la despensa y las advertencias. Espera a Seguridad, porque sin autorización cualquiera podría elegir o modificar el propietario de un ítem. Tampoco se incluyen la vista de vencimientos (RF-13), la administración de la despensa (RF-10, RF-11) ni el envío de correos.

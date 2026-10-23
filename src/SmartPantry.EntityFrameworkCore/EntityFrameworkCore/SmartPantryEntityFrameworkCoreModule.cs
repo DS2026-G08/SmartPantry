@@ -1,9 +1,12 @@
 using System;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SmartPantry.Pantries;
 using Volo.Abp.Uow;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore;
+using Volo.Abp.EntityFrameworkCore.DependencyInjection;
 using Volo.Abp.EntityFrameworkCore.SqlServer;
 using Volo.Abp.FeatureManagement.EntityFrameworkCore;
 using Volo.Abp.Identity.EntityFrameworkCore;
@@ -43,6 +46,15 @@ public class SmartPantryEntityFrameworkCoreModule : AbpModule
                 /* Remove "includeAllEntities: true" to create
                  * default repositories only for aggregate roots */
             options.AddDefaultRepositories(includeAllEntities: true);
+        });
+
+        // Al pedir una despensa "con detalles" (GetAsync, FindAsync) se cargan sus ítems.
+        Configure<AbpEntityOptions>(options =>
+        {
+            options.Entity<Pantry>(pantryOptions =>
+            {
+                pantryOptions.DefaultWithDetailsFunc = query => query.Include(p => p.Items);
+            });
         });
 
         if (AbpStudioAnalyzeHelper.IsInAnalyzeMode)
