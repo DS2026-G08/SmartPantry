@@ -1,13 +1,11 @@
 ﻿using SmartPantry.Localization;
 using Volo.Abp.Application.Services;
-using Microsoft.AspNetCore.Authorization;
 
 namespace SmartPantry;
 
 /* Inherit your application services from this class.
  */
-// Decisión técnica temporal: acceso anónimo habilitado para verificar la operación en Swagger sin login previo
-[AllowAnonymous]
+// TP09: ya no permite acceso anónimo. Cada AppService declara su propia autorización con [Authorize].
 public abstract class SmartPantryAppService : ApplicationService
 {
     protected SmartPantryAppService()
