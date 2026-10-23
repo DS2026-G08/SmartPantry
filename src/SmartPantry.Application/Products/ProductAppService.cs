@@ -9,8 +9,8 @@ using Volo.Abp.Domain.Repositories;
 
 namespace SmartPantry.Products;
 
-// Decisión temporal del TP05: acceso anónimo para probar en Swagger sin login.
-[AllowAnonymous]
+// RF-08 (guardado interno). TP09: requiere un usuario autenticado; cualquier usuario común puede consultar y guardar.
+[Authorize]
 public class ProductAppService :
     CrudAppService<
         Product,
@@ -54,4 +54,4 @@ public class ProductAppService :
     {
         return query.OrderBy(p => p.Name);
     }
-}
+}

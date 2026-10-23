@@ -1,8 +1,10 @@
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartPantry.ExternalProducts;
 
-// El acceso anónimo viene de SmartPantryAppService (decisión transitoria de esta etapa).
+// RF-05 (consulta externa). TP09: requiere un usuario autenticado.
+[Authorize]
 public class ExternalProductAppService : SmartPantryAppService, IExternalProductAppService
 {
     private readonly IExternalProductCatalogClient _catalogClient;
