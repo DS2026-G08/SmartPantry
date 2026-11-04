@@ -103,3 +103,18 @@ Implementa **RF-15 (tarea periódica)**: un proceso en segundo plano identifica 
 **Datos locales:** al correr `SmartPantry.DbMigrator` se crea una "Despensa de prueba" del usuario `admin`, con un ítem por cada caso de la regla.
 
 **Todavía no incluido:** API para consultar o administrar la despensa y las advertencias. Espera a Seguridad, porque sin autorización cualquiera podría elegir o modificar el propietario de un ítem. Tampoco se incluyen la vista de vencimientos (RF-13), la administración de la despensa (RF-10, RF-11) ni el envío de correos.
+
+## 🔐 Login y seguridad (TP09)
+
+El backend usa el login de ABP (Account + Identity) y OpenIddict para emitir y validar los access tokens. No hay login propio ni Angular en esta etapa.
+
+| Funcionalidad | AppService y método | Endpoint | Acceso |
+|---|---|---|---|
+| RF-05 consulta externa | `ExternalProductAppService.GetByBarcodeAsync` | `GET /api/app/external-product/by-barcode` | Usuario autenticado |
+| RF-08 guardado interno | `ProductAppService.CreateAsync` (y el resto del CRUD) | `POST /api/app/product` | Usuario autenticado |
+| RF-04 listado de usuarios | `IdentityUserAppService.GetListAsync` (ABP) | `GET /api/identity/users` | Sólo con permisos de administración (`AbpIdentity.Users`) |
+
+- `ExternalProductAppService` y `ProductAppService` tienen `[Authorize]`; se quitó el `[AllowAnonymous]` transitorio de los TPs anteriores.
+- El worker de vencimientos (TP08) sigue funcionando sin usuario: no pasa por la API ni usa `ICurrentUser`.
+- **Swagger** ofrece dos formas de autorizar: `oidc` (inicia sesión en la pantalla de ABP con el cliente `SmartPantry_Swagger`) y `Bearer` (pegar un access token sin el prefijo `Bearer`).
+- Nunca se suben tokens, cookies ni contraseñas al código, al README ni a los PRs.
