@@ -61,11 +61,12 @@ public class PantryDataSeedContributor : IDataSeedContributor, ITransientDepende
         var today = ArgentinaCalendar.GetToday(DateTime.UtcNow);
         var pantry = new Pantry(_guidGenerator.Create(), admin.Id, SamplePantryName);
 
-        pantry.AddItem(_guidGenerator.Create(), leche.Id, today.AddDays(1));    // dentro del umbral
-        pantry.AddItem(_guidGenerator.Create(), yogur.Id, today.AddDays(ExpirationWarningConsts.ThresholdDays)); // día límite
-        pantry.AddItem(_guidGenerator.Create(), queso.Id, today.AddDays(10));   // fuera del umbral
+        // Algunos ítems no informan cantidad ni unidad, para ver cómo la UI comunica el dato faltante (RF-09).
+        pantry.AddItem(_guidGenerator.Create(), leche.Id, today.AddDays(1), 2, "l");    // dentro del umbral
+        pantry.AddItem(_guidGenerator.Create(), yogur.Id, today.AddDays(ExpirationWarningConsts.ThresholdDays), 4, "u"); // día límite
+        pantry.AddItem(_guidGenerator.Create(), queso.Id, today.AddDays(10), 0.5m, "kg"); // fuera del umbral
         pantry.AddItem(_guidGenerator.Create(), pan.Id, today.AddDays(-2));     // vencido
-        pantry.AddItem(_guidGenerator.Create(), arroz.Id, null);                // sin fecha
+        pantry.AddItem(_guidGenerator.Create(), arroz.Id, null, 1, "kg");       // sin fecha
         var consumed = pantry.AddItem(_guidGenerator.Create(), manteca.Id, today.AddDays(1));
         pantry.ConsumeItem(consumed.Id);                                        // consumido
 
