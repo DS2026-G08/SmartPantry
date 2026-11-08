@@ -118,3 +118,37 @@ El backend usa el login de ABP (Account + Identity) y OpenIddict para emitir y v
 - El worker de vencimientos (TP08) sigue funcionando sin usuario: no pasa por la API ni usa `ICurrentUser`.
 - **Swagger** ofrece dos formas de autorizar: `oidc` (inicia sesión en la pantalla de ABP con el cliente `SmartPantry_Swagger`) y `Bearer` (pegar un access token sin el prefijo `Bearer`).
 - Nunca se suben tokens, cookies ni contraseñas al código, al README ni a los PRs.
+
+## 🥫 Pantalla "Mi despensa" (TP10)
+
+Implementa **RF-11** en Angular: listar, editar, marcar como consumidos y eliminar los ítems propios, con **RF-09** aplicado a los datos faltantes. **RF-10** (agregar) queda disponible sólo en el BackEnd, sin pantalla.
+
+| Funcionalidad | AppService y método | Endpoint | Proxy (`@proxy/pantries`) |
+|---|---|---|---|
+| RF-11 listar ítems propios | `PantryItemAppService.GetListAsync` | `GET /api/app/pantry-item` | `PantryItemService.getList` |
+| RF-11 ver un ítem | `PantryItemAppService.GetAsync` | `GET /api/app/pantry-item/{id}` | `PantryItemService.get` |
+| RF-11 editar cantidad, unidad y vencimiento | `PantryItemAppService.UpdateAsync` | `PUT /api/app/pantry-item/{id}` | `PantryItemService.update` |
+| RF-11 marcar como consumido | `PantryItemAppService.ConsumeAsync` | `POST /api/app/pantry-item/{id}/consume` | `PantryItemService.consume` |
+| RF-11 eliminar | `PantryItemAppService.DeleteAsync` | `DELETE /api/app/pantry-item/{id}` | `PantryItemService.delete` |
+| RF-10 agregar (sólo BackEnd) | `PantryItemAppService.CreateAsync` | `POST /api/app/pantry-item` | `PantryItemService.create` (sin uso en la UI) |
+
+**Acceso**
+- `PantryItemAppService` tiene `[Authorize]`: sin sesión ni token responde **401**.
+- El propietario sale siempre de `ICurrentUser`. Antes de leer, editar, consumir o eliminar, se busca el ítem **dentro de las despensas del usuario actual**.
+- **Un ítem de otro usuario responde 404**, igual que uno inexistente, en todas las operaciones. Así la API no revela que el ítem existe.
+- La UI oculta el menú a quien no tiene sesión, pero eso no reemplaza la autorización: la protección está en el servidor.
+
+**Ítems consumidos (regla de negocio 6):** se **conservan como historial**. Por defecto el listado muestra sólo los disponibles; el interruptor "Mostrar consumidos" los agrega al final, atenuados y con la etiqueta "Consumido". Para quitar un ítem de la despensa hay que eliminarlo de forma explícita, con confirmación previa.
+
+**ListService:** el listado es paginado (`PagedResultDto`), así que la pantalla usa `ListService` para la paginación y la recarga después de cada operación.
+
+**Criterio de fechas:** las fechas de vencimiento son días calendario sin hora (`DateOnly` en el BackEnd, `"yyyy-MM-dd"` en el proxy). La UI las muestra con el formato del idioma de la aplicación y las convierte sin pasar por `Date`, para que la zona horaria no corra el día. **Coincide con el criterio del worker del TP08**, que compara contra el día calendario de Argentina.
+
+**Manejo de errores**
+- **Listado:** usa `skipHandleError: true`. La pantalla muestra su propio estado de error con un mensaje localizado y el botón "Reintentar", en lugar del modal global de ABP sobre una pantalla vacía.
+- **Editar, consumir y eliminar:** usan el manejo predeterminado de ABP, que muestra el mensaje del servidor de forma comprensible. Si el servidor rechaza una edición, el modal sigue abierto con lo ingresado.
+- No se muestran detalles técnicos ni códigos de estado como único mensaje.
+
+**Validación:** el servidor valida cantidad no negativa, unidad de hasta 16 caracteres y fecha válida. El formulario repite esas reglas por usabilidad, con los mensajes localizados de ABP, y no llama al servidor si hay errores.
+
+**Pruebas:** `yarn test --watch=false --browsers=ChromeHeadless` en `angular` (componente con el proxy mockeado) y la suite del BackEnd desde Test Explorer.
