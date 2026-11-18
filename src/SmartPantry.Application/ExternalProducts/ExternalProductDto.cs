@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace SmartPantry.ExternalProducts;
 
 /// <summary>
@@ -10,4 +12,11 @@ public class ExternalProductDto
     public string? Name { get; set; }
     public string? Brand { get; set; }
     public string? ImageUrl { get; set; }
+
+    // Detalle (RF-07). En los resultados de la búsqueda por texto sólo vienen los datos de arriba.
+    public string? Categories { get; set; }
+    public string? Ingredients { get; set; }
+    public List<string> AllergenTags { get; set; } = new();
+    public string? NutriScore { get; set; }
+    public int? NovaGroup { get; set; }
 }
