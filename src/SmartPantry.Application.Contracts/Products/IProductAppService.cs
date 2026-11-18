@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
@@ -12,4 +13,9 @@ public interface IProductAppService :
         CreateProductDto,                // entrada para crear
         UpdateProductDto>                // entrada para modificar
 {
+    /// <summary>
+    /// RF-08: guarda un producto del catálogo externo. Si ya hay un producto con ese código,
+    /// lo devuelve sin crear otro (la operación se puede repetir sin duplicar).
+    /// </summary>
+    Task<ProductDto> SaveFromExternalAsync(SaveExternalProductDto input);
 }
