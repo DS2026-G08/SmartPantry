@@ -40,9 +40,12 @@
 
       @case ('loaded') {
         @if (items().length === 0) {
-          <p class="text-center text-muted py-4 mb-0" data-test="pantry-empty">
-            {{ '::Pantry:Empty' | abpLocalization }}
-          </p>
+          <div class="text-center text-muted py-4" data-test="pantry-empty">
+            <p class="mb-2">{{ '::Pantry:Empty' | abpLocalization }}</p>
+            <a class="btn btn-outline-primary btn-sm" routerLink="/products">
+              <i class="fa fa-search me-1" aria-hidden="true"></i>{{ '::Menu:Products' | abpLocalization }}
+            </a>
+          </div>
         } @else {
           <ul class="list-group" data-test="pantry-items">
             @for (item of items(); track item.id) {
@@ -61,7 +64,9 @@
                         </span>
                       }
                     </div>
-                    <div class="small text-muted pantry-item__name">{{ item.productBrand }}</div>
+                    @if (item.productBrand) {
+                      <div class="small text-muted pantry-item__name">{{ item.productBrand }}</div>
+                    }
 
                     <dl class="pantry-item__details small mb-0 mt-2">
                       <dt>{{ '::Pantry:ExpirationDate' | abpLocalization }}</dt>

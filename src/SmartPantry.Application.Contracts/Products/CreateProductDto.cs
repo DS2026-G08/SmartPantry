@@ -8,9 +8,9 @@ public class CreateProductDto
     [StringLength(ProductConsts.MaxNameLength)]
     public string Name { get; set; } = null!;
 
-    [Required]
+    // RF-09: la marca es opcional.
     [StringLength(ProductConsts.MaxBrandLength)]
-    public string Brand { get; set; } = null!;
+    public string? Brand { get; set; }
 
     [StringLength(ProductConsts.MaxBarcodeLength)]
     public string? Barcode { get; set; }

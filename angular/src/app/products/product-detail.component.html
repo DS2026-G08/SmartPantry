@@ -1,0 +1,230 @@
+<div class="mb-3">
+  <a class="btn btn-link px-0" routerLink="/products" [queryParams]="backQuery() ? { q: backQuery() } : {}">
+    <i class="fa fa-arrow-left me-1" aria-hidden="true"></i>{{ '::Product:BackToSearch' | abpLocalization }}
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    @switch (state()) {
+      @case ('loading') {
+        <div class="text-center text-muted py-4" data-test="product-detail-loading" role="status">
+          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          {{ '::Product:LoadingDetail' | abpLocalization }}
+        </div>
+      }
+
+      @case ('error') {
+        <div
+          class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-2 mb-0"
+          data-test="product-detail-error"
+          role="alert"
+        >
+          <span>{{ '::Product:SearchError' | abpLocalization }}</span>
+          <button type="button" class="btn btn-outline-danger btn-sm" (click)="load()">
+            <i class="fa fa-redo me-1" aria-hidden="true"></i>{{ '::Pantry:Retry' | abpLocalization }}
+          </button>
+        </div>
+      }
+
+      @case ('rateLimited') {
+        <div
+          class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2 mb-0"
+          data-test="product-detail-rate-limited"
+          role="alert"
+        >
+          <span>{{ '::Product:RateLimited' | abpLocalization }}</span>
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="load()">
+            <i class="fa fa-redo me-1" aria-hidden="true"></i>{{ '::Pantry:Retry' | abpLocalization }}
+          </button>
+        </div>
+      }
+
+      @case ('notFound') {
+        <p class="text-center text-muted py-4 mb-0" data-test="product-detail-not-found">
+          {{ '::Product:NotFound' | abpLocalization }} <span class="text-nowrap">({{ barcode() }})</span>
+        </p>
+      }
+
+      @case ('loaded') {
+        @if (product(); as p) {
+          <div class="row g-4" data-test="product-detail">
+            <div class="col-12 col-md-4 text-center">
+              @if (p.imageUrl) {
+                <img class="product-detail__image" [src]="p.imageUrl" [alt]="p.name ?? ''" />
+              } @else {
+                <div class="product-detail__no-image text-muted">
+                  <i class="fa fa-image fa-2x d-block mb-2" aria-hidden="true"></i>
+                  <span class="fst-italic">{{ '::Product:NoImage' | abpLocalization }}</span>
+                </div>
+              }
+            </div>
+
+            <div class="col-12 col-md-8">
+              <h4 class="mb-1 product-detail__text">
+                @if (p.name) {
+                  {{ p.name }}
+                } @else {
+                  <span class="text-muted fst-italic">{{ '::Product:NoName' | abpLocalization }}</span>
+                }
+              </h4>
+              <div class="text-muted mb-3 product-detail__text">
+                @if (p.brand) {
+                  {{ p.brand }}
+                } @else {
+                  <span class="fst-italic">{{ '::Product:NoBrand' | abpLocalization }}</span>
+                }
+              </div>
+
+              <dl class="product-detail__data mb-3">
+                <dt>{{ '::Product:Barcode' | abpLocalization }}</dt>
+                <dd>{{ p.barcode }}</dd>
+
+                <dt>{{ '::Product:Categories' | abpLocalization }}</dt>
+                <dd class="product-detail__text">
+                  @if (p.categories) {
+                    {{ p.categories }}
+                  } @else {
+                    <span class="text-muted fst-italic">{{ '::Product:NotProvided' | abpLocalization }}</span>
+                  }
+                </dd>
+
+                <dt>{{ '::Product:Ingredients' | abpLocalization }}</dt>
+                <dd class="product-detail__text">
+                  @if (p.ingredients) {
+                    {{ p.ingredients }}
+                  } @else {
+                    <span class="text-muted fst-italic">{{ '::Product:NotProvided' | abpLocalization }}</span>
+                  }
+                </dd>
+
+                <dt>{{ '::Product:Allergens' | abpLocalization }}</dt>
+                <dd data-test="product-allergens">
+                  @if (allergens().length) {
+                    @for (allergen of allergens(); track allergen.text) {
+                      <span class="badge bg-secondary me-1 mb-1">
+                        {{ allergen.key ? (allergen.key | abpLocalization) : allergen.text }}
+                      </span>
+                    }
+                  } @else {
+                    <!-- Sin datos no significa "sin alérgenos": se aclara que no está informado. -->
+                    <span class="text-muted fst-italic">{{ '::Product:AllergensNotProvided' | abpLocalization }}</span>
+                  }
+                </dd>
+
+                <dt>{{ '::Product:NutriScore' | abpLocalization }}</dt>
+                <dd data-test="product-nutriscore">
+                  @if (p.nutriScore) {
+                    <span class="badge fs-6" [class]="nutriScoreClass(p.nutriScore)">{{ p.nutriScore.toUpperCase() }}</span>
+                  } @else {
+                    <span class="text-muted fst-italic">{{ '::Product:NotProvided' | abpLocalization }}</span>
+                  }
+                </dd>
+
+                <dt>{{ '::Product:Nova' | abpLocalization }}</dt>
+                <dd data-test="product-nova">
+                  @if (p.novaGroup) {
+                    <span class="badge bg-dark me-1">{{ p.novaGroup }}</span>
+                    {{ '::Product:Nova:' + p.novaGroup | abpLocalization }}
+                  } @else {
+                    <span class="text-muted fst-italic">{{ '::Product:NotProvided' | abpLocalization }}</span>
+                  }
+                </dd>
+              </dl>
+
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <button type="button" class="btn btn-primary" (click)="openAddToPantry()" data-test="product-add">
+                  <i class="fa fa-plus me-1" aria-hidden="true"></i>{{ '::Product:AddToPantry' | abpLocalization }}
+                </button>
+                @if (addedToPantry()) {
+                  <a class="btn btn-outline-success" routerLink="/pantry" data-test="product-go-to-pantry">
+                    <i class="fa fa-box-open me-1" aria-hidden="true"></i>{{ '::Product:GoToPantry' | abpLocalization }}
+                  </a>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      }
+    }
+
+    <p class="small text-muted mt-4 mb-0" data-test="product-source">
+      {{ '::Product:SourceNotice' | abpLocalization }}
+      @if (state() === 'loaded') {
+        <a [href]="'https://world.openfoodfacts.org/product/' + barcode()" target="_blank" rel="noopener noreferrer">
+          {{ '::Product:ViewOnSource' | abpLocalization }}
+        </a>
+      }
+    </p>
+  </div>
+</div>
+
+<abp-modal [visible]="isModalOpen()" (visibleChange)="isModalOpen.set($event)" [busy]="isSaving()">
+  <ng-template #abpHeader>
+    <h3>{{ '::Product:AddToPantry' | abpLocalization }}</h3>
+  </ng-template>
+
+  <ng-template #abpBody>
+    <form [formGroup]="form" (ngSubmit)="addToPantry()" id="add-to-pantry-form">
+      @if (needsName) {
+        <div class="mt-2">
+          <label class="form-label" for="add-to-pantry-name">{{ '::Product:Name' | abpLocalization }} *</label>
+          <input
+            id="add-to-pantry-name"
+            class="form-control"
+            formControlName="name"
+            [attr.maxlength]="maxNameLength"
+          />
+          <div class="form-text">{{ '::Product:NameRequiredHint' | abpLocalization }}</div>
+        </div>
+      } @else {
+        <p class="fw-semibold">{{ product()?.name }}</p>
+      }
+      <div class="mt-2">
+        <label class="form-label" for="add-to-pantry-quantity">{{ '::Pantry:Quantity' | abpLocalization }}</label>
+        <input type="number" id="add-to-pantry-quantity" class="form-control" formControlName="quantity" min="0" step="any" />
+      </div>
+      <div class="mt-2">
+        <label class="form-label" for="add-to-pantry-unit">{{ '::Pantry:Unit' | abpLocalization }}</label>
+        <input type="text" id="add-to-pantry-unit" class="form-control" formControlName="unit" [attr.maxlength]="maxUnitLength" />
+      </div>
+      <div class="mt-2">
+        <label class="form-label" for="add-to-pantry-expiration">{{ '::Pantry:ExpirationDate' | abpLocalization }}</label>
+        <div class="input-group" validationTarget>
+          <input
+            id="add-to-pantry-expiration"
+            class="form-control"
+            name="expirationDate"
+            formControlName="expirationDate"
+            ngbDatepicker
+            #datepicker="ngbDatepicker"
+          />
+          <button
+            class="btn btn-outline-secondary"
+            type="button"
+            [attr.aria-label]="'::Pantry:ExpirationDate' | abpLocalization"
+            (click)="datepicker.toggle()"
+          >
+            <i class="fa fa-calendar" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      <p class="form-text mt-3 mb-0">{{ '::Product:AddToPantryHint' | abpLocalization }}</p>
+    </form>
+  </ng-template>
+
+  <ng-template #abpFooter>
+    <button type="button" class="btn btn-secondary" abpClose>
+      {{ '::Pantry:Cancel' | abpLocalization }}
+    </button>
+    <abp-button
+      iconClass="fa fa-check"
+      buttonType="submit"
+      formName="add-to-pantry-form"
+      [loading]="isSaving()"
+      [disabled]="form.invalid || isSaving()"
+    >
+      {{ '::Product:Add' | abpLocalization }}
+    </abp-button>
+  </ng-template>
+</abp-modal>

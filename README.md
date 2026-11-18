@@ -152,3 +152,43 @@ Implementa **RF-11** en Angular: listar, editar, marcar como consumidos y elimin
 **Validación:** el servidor valida cantidad no negativa, unidad de hasta 16 caracteres y fecha válida. El formulario repite esas reglas por usabilidad, con los mensajes localizados de ABP, y no llama al servidor si hay errores.
 
 **Pruebas:** `yarn test --watch=false --browsers=ChromeHeadless` en `angular` (componente con el proxy mockeado) y la suite del BackEnd desde Test Explorer.
+
+## 🔎 Catálogo de productos (entrega final)
+
+Cubre **HU-02** y **HU-03**: buscar un producto por código o por texto, ver su detalle, guardarlo sin duplicados y agregarlo a la despensa. Completa la pantalla de **RF-10**, que en el TP10 quedó sólo en el BackEnd.
+
+| Funcionalidad | AppService y método | Endpoint | Proxy | Pantalla |
+|---|---|---|---|---|
+| RF-05 búsqueda por código | `ExternalProductAppService.GetByBarcodeAsync` | `GET /api/app/external-product/by-barcode` | `ExternalProductService.getByBarcode` | Buscar productos → detalle |
+| RF-06 búsqueda por texto | `ExternalProductAppService.GetListAsync` | `GET /api/app/external-product` | `ExternalProductService.getList` | Buscar productos |
+| RF-07 detalle de producto | `ExternalProductAppService.GetByBarcodeAsync` | `GET /api/app/external-product/by-barcode` | `ExternalProductService.getByBarcode` | Detalle (`/products/:barcode`) |
+| RF-08 guardar producto externo | `ProductAppService.SaveFromExternalAsync` | `POST /api/app/product/save-from-external` | `ProductService.saveFromExternal` | Detalle → "Agregar a mi despensa" |
+| RF-10 agregar a la despensa | `PantryItemAppService.CreateAsync` | `POST /api/app/pantry-item` | `PantryItemService.create` | Detalle → "Agregar a mi despensa" |
+
+**Integración externa**
+- **Por código (RF-05, RF-07):** Product Opener API v3 (`https://world.openfoodfacts.org/api/v3/product/{código}`). Se piden sólo los campos que se usan: nombre, marca, imagen, categorías, ingredientes, alérgenos, Nutri-Score y NOVA.
+- **Por texto (RF-06):** Search-a-licious (`https://search.openfoodfacts.org/search?q=…&langs=es`). Busca a la vez por nombre, marca y categoría. El texto del usuario se reduce a letras, números y espacios, para que nunca se interprete como sintaxis de consulta.
+- Las dos consultas están detrás de `IExternalProductCatalogClient` (Application). La implementación (`OpenFoodFactsProductCatalogClient`, HttpApi.Host) es la única que conoce las URLs, los códigos HTTP y el JSON del proveedor.
+- Cada llamada registra el tipo, el resultado y la duración. No se registran el contenido de la respuesta ni el texto buscado.
+- **Paginación:** Search-a-licious pagina por número de página, así que `SkipCount` tiene que ser múltiplo de `MaxResultCount`. Se navega hasta **1.000 resultados**: el proveedor informa hasta 10.000, pero las páginas muy profundas fallan y nadie las recorre.
+- **Estados:** las dos operaciones devuelven `Found`, `NotFound`, `RateLimited` (HTTP 429) o `ServiceUnavailable` (sin conexión, timeout o error del proveedor). La pantalla muestra un mensaje distinto para cada uno.
+
+**Datos faltantes (RF-09)**
+- Todos los datos de RF-07 son opcionales, **incluida la marca**, que dejó de ser obligatoria porque muchos productos no la traen.
+- El Nutri-Score `"unknown"` o `"not-applicable"` y un grupo NOVA fuera de 1-4 se informan como "No informado", no como un valor.
+- **Alérgenos:** se guardan las etiquetas canónicas de Open Food Facts (`en:milk`), porque son las que se compararán con las preferencias del usuario. El texto libre cargado por usuarios del proveedor, como `es:Contiene leche`, se descarta. Una lista vacía se muestra como "No informados (eso no significa que no tenga)".
+- Los textos de terceros que superan el largo de la columna se recortan en lugar de rechazar el producto.
+
+**Guardado sin duplicados (RF-08, regla de negocio 4)**
+- `AppProducts.Barcode` tiene un **índice único filtrado**: los productos sin código no tienen restricción. El alta y la edición manual validan el código antes de guardar y responden un mensaje localizado si ya existe.
+- `SaveFromExternalAsync` recibe **sólo el código**: el servidor vuelve a consultar Open Food Facts y guarda lo que obtiene, sin confiar en datos armados por el navegador.
+- **Es repetible:** si el código ya está guardado, devuelve ese producto sin volver a consultar al proveedor. Agregar dos veces el mismo producto crea dos ítems de despensa (por ejemplo, dos unidades con distinto vencimiento), pero un solo producto.
+- Si el proveedor no informa el nombre, la pantalla pide que el usuario lo escriba. El sistema nunca lo inventa.
+
+**Pantallas**
+- **Buscar productos (`/products`):** un solo campo. Con 8 a 14 dígitos va directo al detalle; con cualquier otro texto busca por nombre, marca o categoría, así que no hace falta conocer códigos. Usa `ListService` para paginar. El texto buscado queda en la URL (`?q=`), así que "Volver a la búsqueda" conserva los resultados.
+- **Detalle (`/products/:barcode`):** muestra los datos de RF-07 y el botón "Agregar a mi despensa". El modal pide cantidad, unidad y vencimiento, todos opcionales, con las mismas validaciones que la edición del TP10.
+- Las dos pantallas requieren sesión (`authGuard`, menú visible sólo con sesión) y muestran la leyenda de la fuente: *"Datos de Open Food Facts… SmartPantry no ofrece consejo médico"*.
+- **Errores:** la búsqueda y el detalle usan `skipHandleError` y muestran su propio estado con "Reintentar". "Agregar" usa el manejo predeterminado de ABP, que muestra el mensaje del servidor, por ejemplo "Open Food Facts no está disponible", y deja el modal abierto con lo ingresado.
+
+**Base de datos:** la migración `AddProductCatalogDetails` agrega las columnas de RF-07, hace opcional la marca y crea el índice único. Si una base local ya tenía dos productos con el mismo código, la migración falla al crear el índice: hay que borrar o corregir el duplicado y volver a correr `SmartPantry.DbMigrator`.

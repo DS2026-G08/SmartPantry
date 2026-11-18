@@ -145,8 +145,9 @@ public class ExpirationWarningManager_Tests : SmartPantryEntityFrameworkCoreTest
     {
         return WithUnitOfWorkAsync(async () =>
         {
+            // Sin código de barras: el código es único (regla de negocio 4) y cada llamada crea otro producto.
             var product = await _productRepository.InsertAsync(
-                new Product(Guid.NewGuid(), "Leche", "La Serenisima", "7790742000001"));
+                new Product(Guid.NewGuid(), "Leche", "La Serenisima"));
 
             var pantry = new Pantry(Guid.NewGuid(), Guid.NewGuid(), "Despensa de prueba");
             var item = pantry.AddItem(Guid.NewGuid(), product.Id, expirationDate);

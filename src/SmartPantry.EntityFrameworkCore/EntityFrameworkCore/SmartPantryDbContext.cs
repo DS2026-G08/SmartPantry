@@ -118,12 +118,25 @@ public class SmartPantryDbContext :
                 .IsRequired()
                 .HasMaxLength(ProductConsts.MaxNameLength);
 
+            // RF-09: la marca es opcional porque el catálogo externo no siempre la informa.
             b.Property(x => x.Brand)
-                .IsRequired()
                 .HasMaxLength(ProductConsts.MaxBrandLength);
 
             b.Property(x => x.Barcode)
                 .HasMaxLength(ProductConsts.MaxBarcodeLength);
+
+            // Regla de negocio 4 / RF-08: un código de barras identifica a un único producto.
+            // El filtro permite varios productos sin código.
+            b.HasIndex(x => x.Barcode)
+                .IsUnique()
+                .HasFilter("[Barcode] IS NOT NULL");
+
+            // Datos del catálogo externo (RF-07)
+            b.Property(x => x.ImageUrl).HasMaxLength(ProductConsts.MaxImageUrlLength);
+            b.Property(x => x.Categories).HasMaxLength(ProductConsts.MaxCategoriesLength);
+            b.Property(x => x.Ingredients).HasMaxLength(ProductConsts.MaxIngredientsLength);
+            b.Property(x => x.Allergens).HasMaxLength(ProductConsts.MaxAllergensLength);
+            b.Property(x => x.NutriScore).HasMaxLength(1);
         });
 
         // TP08: modelo mínimo de despensa y advertencias de vencimiento (RF-15)

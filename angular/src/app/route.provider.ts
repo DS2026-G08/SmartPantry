@@ -7,6 +7,7 @@ export const APP_ROUTE_PROVIDER = [
 ];
 
 const MY_PANTRY_MENU = '::Menu:MyPantry';
+const PRODUCTS_MENU = '::Menu:Products';
 
 function configureRoutes() {
   const routes = inject(RoutesService);
@@ -28,6 +29,13 @@ function configureRoutes() {
         layout: eLayoutType.application,
       },
       {
+        path: '/products',
+        name: PRODUCTS_MENU,
+        iconClass: 'fas fa-search',
+        order: 3,
+        layout: eLayoutType.application,
+      },
+      {
         path: '/books',
         name: '::Menu:Books',
         iconClass: 'fas fa-book',
@@ -43,8 +51,10 @@ function configureRoutes() {
       },
   ]);
 
-  // "Mi despensa" no requiere un permiso, sólo sesión: se muestra únicamente a usuarios autenticados.
+  // "Mi despensa" y "Buscar productos" no requieren un permiso, sólo sesión:
+  // se muestran únicamente a usuarios autenticados.
   configState.getDeep$('currentUser.isAuthenticated').subscribe((isAuthenticated: boolean) => {
     routes.patch(MY_PANTRY_MENU, { invisible: !isAuthenticated });
+    routes.patch(PRODUCTS_MENU, { invisible: !isAuthenticated });
   });
 }

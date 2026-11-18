@@ -1,0 +1,132 @@
+<div class="card">
+  <div class="card-header">
+    <h5 class="card-title mb-0">{{ '::Menu:Products' | abpLocalization }}</h5>
+  </div>
+
+  <div class="card-body">
+    <form [formGroup]="searchForm" (ngSubmit)="search()" class="mb-3" role="search">
+      <label class="form-label" for="product-search-text">{{ '::Product:SearchLabel' | abpLocalization }}</label>
+      <div class="input-group" validationTarget>
+        <input
+          id="product-search-text"
+          class="form-control"
+          type="search"
+          formControlName="text"
+          [attr.maxlength]="100"
+          autocomplete="off"
+        />
+        <button class="btn btn-primary" type="submit" data-test="product-search-submit">
+          <i class="fa fa-search me-1" aria-hidden="true"></i>{{ '::Product:Search' | abpLocalization }}
+        </button>
+      </div>
+      <div class="form-text">{{ '::Product:SearchHint' | abpLocalization }}</div>
+    </form>
+
+    @switch (state()) {
+      @case ('idle') {
+        <p class="text-center text-muted py-4 mb-0" data-test="product-search-idle">
+          {{ '::Product:SearchIdle' | abpLocalization }}
+        </p>
+      }
+
+      @case ('loading') {
+        <div class="text-center text-muted py-4" data-test="product-search-loading" role="status">
+          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          {{ '::Product:Searching' | abpLocalization }}
+        </div>
+      }
+
+      @case ('error') {
+        <div
+          class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-2 mb-0"
+          data-test="product-search-error"
+          role="alert"
+        >
+          <span>{{ '::Product:SearchError' | abpLocalization }}</span>
+          <button type="button" class="btn btn-outline-danger btn-sm" (click)="retry()">
+            <i class="fa fa-redo me-1" aria-hidden="true"></i>{{ '::Pantry:Retry' | abpLocalization }}
+          </button>
+        </div>
+      }
+
+      @case ('rateLimited') {
+        <div
+          class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2 mb-0"
+          data-test="product-search-rate-limited"
+          role="alert"
+        >
+          <span>{{ '::Product:RateLimited' | abpLocalization }}</span>
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="retry()">
+            <i class="fa fa-redo me-1" aria-hidden="true"></i>{{ '::Pantry:Retry' | abpLocalization }}
+          </button>
+        </div>
+      }
+
+      @case ('empty') {
+        <p class="text-center text-muted py-4 mb-0" data-test="product-search-empty">
+          {{ '::Product:NoResults' | abpLocalization }}
+        </p>
+      }
+
+      @case ('loaded') {
+        <ul class="list-unstyled row g-3 mb-0" data-test="product-search-results">
+          @for (item of items(); track item.barcode) {
+            <li class="col-12 col-sm-6 col-lg-4" data-test="product-search-item">
+              <a
+                class="card h-100 text-decoration-none product-result"
+                [routerLink]="['/products', item.barcode]"
+                [queryParams]="{ q: searchedText() }"
+              >
+                <div class="card-body d-flex gap-3 align-items-center">
+                  <div class="product-result__image" aria-hidden="true">
+                    @if (item.imageUrl) {
+                      <img [src]="item.imageUrl" alt="" loading="lazy" />
+                    } @else {
+                      <i class="fa fa-image text-muted"></i>
+                    }
+                  </div>
+                  <div class="product-result__info">
+                    <div class="fw-semibold text-body product-result__text">
+                      @if (item.name) {
+                        {{ item.name }}
+                      } @else {
+                        <span class="text-muted fst-italic">{{ '::Product:NoName' | abpLocalization }}</span>
+                      }
+                    </div>
+                    <div class="small text-muted product-result__text">
+                      @if (item.brand) {
+                        {{ item.brand }}
+                      } @else {
+                        <span class="fst-italic">{{ '::Product:NoBrand' | abpLocalization }}</span>
+                      }
+                    </div>
+                    <div class="small text-muted">{{ item.barcode }}</div>
+                  </div>
+                </div>
+              </a>
+            </li>
+          }
+        </ul>
+
+        @if (totalCount() > list.maxResultCount) {
+          <div class="d-flex justify-content-center mt-3">
+            <ngb-pagination
+              [collectionSize]="totalCount()"
+              [pageSize]="list.maxResultCount"
+              [page]="list.page + 1"
+              [maxSize]="3"
+              [rotate]="true"
+              [boundaryLinks]="false"
+              size="sm"
+              (pageChange)="changePage($event)"
+            />
+          </div>
+        }
+      }
+    }
+
+    <p class="small text-muted mt-3 mb-0" data-test="product-source">
+      {{ '::Product:SourceNotice' | abpLocalization }}
+    </p>
+  </div>
+</div>

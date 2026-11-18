@@ -1,13 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import {
-  AbstractControl,
-  FormBuilder,
-  ReactiveFormsModule,
-  ValidationErrors,
-  Validators,
-} from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { NgbDatepickerModule, NgbDateStruct, NgbPaginationModule } from '@ng-bootstrap/ng-bootstrap';
 import { NgxValidateCoreModule } from '@ngx-validate/core';
 import { catchError, EMPTY, finalize } from 'rxjs';
@@ -26,28 +21,10 @@ import {
   PantryItemService,
   PantryItemStatus,
 } from '../proxy/pantries';
+import { toDateStruct, toIsoDate, validDateValidator } from '../shared/calendar-date';
 
 // Mismo máximo que PantryItemConsts.MaxUnitLength en el BackEnd.
 export const MAX_UNIT_LENGTH = 16;
-
-// Fecha opcional; si se informa, tiene que ser un día real. Usa la clave "ngbDate" para que
-// ABP muestre su mensaje de validación localizado, el mismo que usa ngbDatepicker.
-export function validDateValidator(control: AbstractControl): ValidationErrors | null {
-  const value = control.value as NgbDateStruct | string | null;
-  if (value === null || value === '') {
-    return null;
-  }
-
-  if (typeof value === 'object') {
-    const { year, month, day } = value;
-    const date = new Date(year, month - 1, day);
-    if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
-      return null;
-    }
-  }
-
-  return { ngbDate: { invalid: value } };
-}
 
 export type PantryLoadState = 'loading' | 'error' | 'loaded';
 
@@ -72,6 +49,7 @@ const ignoreHandledError = () => undefined;
     LocalizationPipe,
     DatePipe,
     DecimalPipe,
+    RouterLink,
   ],
   providers: [ListService],
 })
@@ -150,7 +128,7 @@ export class PantryComponent {
     this.form.reset({
       quantity: item.quantity ?? null,
       unit: item.unit ?? null,
-      expirationDate: this.toDateStruct(item.expirationDate),
+      expirationDate: toDateStruct(item.expirationDate),
     });
     this.isModalOpen.set(true);
   }
@@ -175,7 +153,7 @@ export class PantryComponent {
       .update(item.id!, {
         quantity: quantity ?? null,
         unit: unit?.trim() || null,
-        expirationDate: this.toIsoDate(expirationDate),
+        expirationDate: toIsoDate(expirationDate),
       })
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
@@ -216,25 +194,5 @@ export class PantryComponent {
           error: ignoreHandledError,
         });
       });
-  }
-
-  // Las fechas son días calendario "yyyy-MM-dd" sin hora: se convierten sin pasar por Date
-  // para no correr el día por la zona horaria.
-  private toDateStruct(value?: string | null): NgbDateStruct | null {
-    if (!value) {
-      return null;
-    }
-
-    const [year, month, day] = value.substring(0, 10).split('-').map(Number);
-    return { year, month, day };
-  }
-
-  private toIsoDate(value: NgbDateStruct | null): string | null {
-    if (!value) {
-      return null;
-    }
-
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${value.year}-${pad(value.month)}-${pad(value.day)}`;
   }
 }
