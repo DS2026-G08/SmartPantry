@@ -7,9 +7,8 @@ using Volo.Abp.Domain.Entities;
 namespace SmartPantry.Pantries;
 
 /// <summary>
-/// Modelo mínimo del TP08: lo necesario para que el worker de vencimientos (RF-15)
-/// procese ítems propios de un usuario. La administración de la despensa (RF-10, RF-11)
-/// llegará con Seguridad.
+/// Despensa de un usuario. TP08 incorporó el modelo mínimo para el worker de vencimientos
+/// (RF-15); TP10 agrega la administración de los ítems propios (RF-10, RF-11).
 /// </summary>
 public class Pantry : AggregateRoot<Guid>
 {
@@ -41,9 +40,14 @@ public class Pantry : AggregateRoot<Guid>
         Name = trimmedName;
     }
 
-    public PantryItem AddItem(Guid itemId, Guid productId, DateOnly? expirationDate)
+    public PantryItem AddItem(
+        Guid itemId,
+        Guid productId,
+        DateOnly? expirationDate,
+        decimal? quantity = null,
+        string? unit = null)
     {
-        var item = new PantryItem(itemId, Id, productId, expirationDate);
+        var item = new PantryItem(itemId, Id, productId, expirationDate, quantity, unit);
         Items.Add(item);
         return item;
     }
@@ -53,12 +57,23 @@ public class Pantry : AggregateRoot<Guid>
         GetItem(itemId).ChangeExpirationDate(expirationDate);
     }
 
+    public void UpdateItem(Guid itemId, DateOnly? expirationDate, decimal? quantity, string? unit)
+    {
+        GetItem(itemId).Update(expirationDate, quantity, unit);
+    }
+
+    // Regla de negocio 6: consumir no elimina el ítem; queda como historial.
     public void ConsumeItem(Guid itemId)
     {
         GetItem(itemId).MarkAsConsumed();
     }
 
-    private PantryItem GetItem(Guid itemId)
+    public void RemoveItem(Guid itemId)
+    {
+        Items.Remove(GetItem(itemId));
+    }
+
+    public PantryItem GetItem(Guid itemId)
     {
         return Items.FirstOrDefault(i => i.Id == itemId)
             ?? throw new EntityNotFoundException(typeof(PantryItem), itemId);

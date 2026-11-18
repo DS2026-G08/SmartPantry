@@ -149,6 +149,13 @@ public class SmartPantryDbContext :
             b.ToTable(SmartPantryConsts.DbTablePrefix + "PantryItems", SmartPantryConsts.DbSchema);
             b.ConfigureByConvention();
 
+            // TP10: datos opcionales del ítem
+            b.Property(x => x.Quantity)
+                .HasPrecision(PantryItemConsts.QuantityPrecision, PantryItemConsts.QuantityScale);
+
+            b.Property(x => x.Unit)
+                .HasMaxLength(PantryItemConsts.MaxUnitLength);
+
             // Un producto que está en alguna despensa no se puede borrar.
             b.HasOne<Product>()
                 .WithMany()

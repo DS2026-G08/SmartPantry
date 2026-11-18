@@ -19,6 +19,12 @@ export const APP_ROUTES: Routes = [
     loadChildren: () => import('@abp/ng.setting-management').then(c => c.createRoutes()),
   },
   {
+    // TP10 (RF-11): sin sesión, authGuard redirige al login de ABP.
+    path: 'pantry',
+    loadComponent: () => import('./pantry/pantry.component').then(c => c.PantryComponent),
+    canActivate: [authGuard],
+  },
+  {
     path: 'books',
     loadComponent: () => import('./book/book.component').then(c => c.BookComponent),
     canActivate: [authGuard, permissionGuard],
