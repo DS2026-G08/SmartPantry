@@ -25,6 +25,20 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard],
   },
   {
+    // RF-05 y RF-06: búsqueda por código o por texto.
+    path: 'products',
+    loadComponent: () =>
+      import('./products/product-search.component').then(c => c.ProductSearchComponent),
+    canActivate: [authGuard],
+  },
+  {
+    // RF-07, RF-08 y RF-10: detalle, guardado y agregar a la despensa.
+    path: 'products/:barcode',
+    loadComponent: () =>
+      import('./products/product-detail.component').then(c => c.ProductDetailComponent),
+    canActivate: [authGuard],
+  },
+  {
     path: 'books',
     loadComponent: () => import('./book/book.component').then(c => c.BookComponent),
     canActivate: [authGuard, permissionGuard],

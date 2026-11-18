@@ -1,0 +1,36 @@
+// Sin anchos fijos: en pantallas chicas la imagen queda arriba y los datos abajo.
+.product-detail__image {
+  max-width: 100%;
+  max-height: 18rem;
+  object-fit: contain;
+}
+
+.product-detail__no-image {
+  padding: 2rem 1rem;
+  border: 1px dashed var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+}
+
+.product-detail__text {
+  overflow-wrap: anywhere;
+}
+
+.product-detail__data {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  column-gap: 1rem;
+  row-gap: 0.5rem;
+
+  dt,
+  dd {
+    margin: 0;
+  }
+
+  @media (max-width: 575.98px) {
+    grid-template-columns: minmax(0, 1fr);
+
+    dd {
+      margin-bottom: 0.5rem;
+    }
+  }
+}
