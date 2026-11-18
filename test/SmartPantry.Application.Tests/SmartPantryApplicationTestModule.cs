@@ -1,4 +1,7 @@
-﻿using Volo.Abp.BackgroundWorkers;
+﻿using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+using SmartPantry.ExternalProducts;
+using Volo.Abp.BackgroundWorkers;
 using Volo.Abp.Modularity;
 
 namespace SmartPantry;
@@ -17,5 +20,9 @@ public class SmartPantryApplicationTestModule : AbpModule
         {
             options.IsEnabled = false;
         });
+
+        // El catálogo externo real vive en HttpApi.Host. En las pruebas se reemplaza por un mock:
+        // no dependen de Internet y cada prueba decide qué responde el proveedor.
+        context.Services.AddSingleton(Substitute.For<IExternalProductCatalogClient>());
     }
 }
