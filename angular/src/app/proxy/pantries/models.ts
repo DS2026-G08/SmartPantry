@@ -12,7 +12,7 @@ export interface GetPantryItemListDto extends PagedResultRequestDto {
 export interface PantryItemDto extends EntityDto<string> {
   productId?: string;
   productName?: string;
-  productBrand?: string;
+  productBrand?: string | null;
   status?: PantryItemStatus;
   expirationDate?: string | null;
   quantity?: number | null;

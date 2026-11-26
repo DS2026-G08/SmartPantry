@@ -2,5 +2,17 @@
 
 public static class SmartPantryDomainErrorCodes
 {
-    /* You can add your business exception error codes here, as constants */
+    // Las claves de localización usan el mismo texto que el código (ver es.json / en.json).
+
+    /// <summary>Ya existe un producto con ese código de barras (regla de negocio 4).</summary>
+    public const string DuplicateBarcode = "SmartPantry:Products:DuplicateBarcode";
+
+    /// <summary>El catálogo externo no conoce el código que se quiso guardar.</summary>
+    public const string ExternalProductNotFound = "SmartPantry:Products:ExternalProductNotFound";
+
+    /// <summary>El catálogo externo no respondió o limitó las consultas al intentar guardar.</summary>
+    public const string ExternalCatalogUnavailable = "SmartPantry:Products:ExternalCatalogUnavailable";
+
+    /// <summary>El producto externo no informa nombre y el usuario tampoco lo indicó.</summary>
+    public const string ExternalProductNameRequired = "SmartPantry:Products:ExternalProductNameRequired";
 }

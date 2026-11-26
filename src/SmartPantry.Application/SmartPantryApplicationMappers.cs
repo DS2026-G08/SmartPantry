@@ -47,10 +47,5 @@ public partial class SmartPantryAuthorToAuthorExcelDtoMapper : MapperBase<Author
 
     public override partial void Map(Author source, AuthorExcelDto destination);
 }
-[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
-public partial class SmartPantryProductToProductDtoMapper : MapperBase<Product, ProductDto>
-{
-    public override partial ProductDto Map(Product source);
 
-    public override partial void Map(Product source, ProductDto destination);
-}
+// Product → ProductDto se convierte a mano en Products/ProductMapping: los alérgenos se guardan como texto y se exponen como lista.
