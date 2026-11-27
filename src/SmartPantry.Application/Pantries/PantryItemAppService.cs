@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using SmartPantry.Preferences;
 using SmartPantry.Products;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Domain.Entities;
@@ -20,13 +22,22 @@ public class PantryItemAppService : SmartPantryAppService, IPantryItemAppService
 {
     private readonly IRepository<Pantry, Guid> _pantryRepository;
     private readonly IRepository<Product, Guid> _productRepository;
+    private readonly IRepository<DietaryPreference, Guid> _preferenceRepository;
+    private readonly IRepository<PreferenceWarning, Guid> _preferenceWarningRepository;
+    private readonly PreferenceWarningManager _preferenceWarningManager;
 
     public PantryItemAppService(
         IRepository<Pantry, Guid> pantryRepository,
-        IRepository<Product, Guid> productRepository)
+        IRepository<Product, Guid> productRepository,
+        IRepository<DietaryPreference, Guid> preferenceRepository,
+        IRepository<PreferenceWarning, Guid> preferenceWarningRepository,
+        PreferenceWarningManager preferenceWarningManager)
     {
         _pantryRepository = pantryRepository;
         _productRepository = productRepository;
+        _preferenceRepository = preferenceRepository;
+        _preferenceWarningRepository = preferenceWarningRepository;
+        _preferenceWarningManager = preferenceWarningManager;
     }
 
     public async Task<PagedResultDto<PantryItemDto>> GetListAsync(GetPantryItemListDto input)
@@ -54,9 +65,10 @@ public class PantryItemAppService : SmartPantryAppService, IPantryItemAppService
             .Skip(input.SkipCount)
             .Take(input.MaxResultCount));
 
-        return new PagedResultDto<PantryItemDto>(
-            totalCount,
-            page.Select(x => MapToDto(x.item, x.product)).ToList());
+        var items = page.Select(x => MapToDto(x.item, x.product)).ToList();
+        await AttachPreferenceWarningsAsync(items);
+
+        return new PagedResultDto<PantryItemDto>(totalCount, items);
     }
 
     public async Task<PantryItemDto> GetAsync(Guid id)
@@ -89,7 +101,17 @@ public class PantryItemAppService : SmartPantryAppService, IPantryItemAppService
             await _pantryRepository.UpdateAsync(pantry, autoSave: true);
         }
 
-        return MapToDto(item, product);
+        // RF-12 "al agregar": el ítem ya existe en la base, así que su advertencia se puede guardar.
+        var preference = await _preferenceRepository.FindAsync(p => p.UserId == ownerId);
+        var warning = await _preferenceWarningManager.RefreshForItemAsync(item.Id, product, preference);
+
+        var dto = MapToDto(item, product);
+        if (warning != null && preference is { ShowAlerts: true })
+        {
+            dto.PreferenceWarning = PreferenceMapping.ToDto(warning);
+        }
+
+        return dto;
     }
 
     public async Task<PantryItemDto> UpdateAsync(Guid id, UpdatePantryItemDto input)
@@ -106,6 +128,9 @@ public class PantryItemAppService : SmartPantryAppService, IPantryItemAppService
         var pantry = await GetOwnPantryOfItemAsync(id);
         pantry.ConsumeItem(id);
         await _pantryRepository.UpdateAsync(pantry, autoSave: true);
+
+        // Un ítem consumido ya no necesita advertencia; queda sólo como historial.
+        await _preferenceWarningManager.DeactivateForItemAsync(id);
 
         return await MapToDtoAsync(pantry.GetItem(id));
     }
@@ -131,7 +156,38 @@ public class PantryItemAppService : SmartPantryAppService, IPantryItemAppService
     private async Task<PantryItemDto> MapToDtoAsync(PantryItem item)
     {
         var product = await _productRepository.GetAsync(item.ProductId);
-        return MapToDto(item, product);
+        var dto = MapToDto(item, product);
+        await AttachPreferenceWarningsAsync(new List<PantryItemDto> { dto });
+        return dto;
+    }
+
+    // RF-12 en el listado: sólo las advertencias activas, y sólo si el usuario quiere ver alertas.
+    private async Task AttachPreferenceWarningsAsync(List<PantryItemDto> items)
+    {
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        var ownerId = CurrentUser.GetId();
+        var preference = await _preferenceRepository.FindAsync(p => p.UserId == ownerId);
+        if (preference is not { ShowAlerts: true })
+        {
+            return; // sin preferencias no hay advertencias; con alertas apagadas no se muestran
+        }
+
+        var itemIds = items.Select(i => i.Id).ToList();
+        var warnings = await _preferenceWarningRepository.GetListAsync(w =>
+            w.IsActive && itemIds.Contains(w.PantryItemId));
+        var warningsByItem = warnings.ToDictionary(w => w.PantryItemId);
+
+        foreach (var item in items)
+        {
+            if (warningsByItem.TryGetValue(item.Id, out var warning))
+            {
+                item.PreferenceWarning = PreferenceMapping.ToDto(warning);
+            }
+        }
     }
 
     private static PantryItemDto MapToDto(PantryItem item, Product product)

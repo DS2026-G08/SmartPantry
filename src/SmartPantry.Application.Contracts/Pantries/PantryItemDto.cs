@@ -1,4 +1,5 @@
 using System;
+using SmartPantry.Preferences;
 using Volo.Abp.Application.Dtos;
 
 namespace SmartPantry.Pantries;
@@ -14,4 +15,10 @@ public class PantryItemDto : EntityDto<Guid>
     public DateOnly? ExpirationDate { get; set; }
     public decimal? Quantity { get; set; }
     public string? Unit { get; set; }
+
+    /// <summary>
+    /// RF-12: advertencia activa del ítem según las preferencias (Match o NotVerifiable). Es null si no
+    /// hay advertencia o si el usuario apagó "Mostrar alertas".
+    /// </summary>
+    public PreferenceEvaluationDto? PreferenceWarning { get; set; }
 }

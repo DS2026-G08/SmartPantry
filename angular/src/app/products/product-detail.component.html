@@ -132,6 +132,60 @@
                 </dd>
               </dl>
 
+              <!-- RF-12: comparación con las preferencias; no aparece si el usuario apagó las alertas. -->
+              @if (preferences(); as evaluation) {
+                @switch (evaluation.status) {
+                  @case (preferenceStatuses.NoPreferences) {
+                    <p class="small mb-3" data-test="product-preferences-none">
+                      {{ '::Warning:NoPreferences' | abpLocalization }}
+                      <a routerLink="/preferences">{{ '::Warning:ConfigurePreferences' | abpLocalization }}</a>
+                    </p>
+                  }
+                  @case (preferenceStatuses.Match) {
+                    <div class="alert alert-warning mb-3" data-test="product-preferences-match" role="alert">
+                      <div class="fw-semibold">
+                        <i class="fa fa-exclamation-triangle me-1" aria-hidden="true"></i>{{ '::Warning:Match' | abpLocalization }}
+                      </div>
+                      <div class="mt-1">
+                        {{ '::Warning:Contains' | abpLocalization }}
+                        @for (match of preferenceMatches(); track match.text) {
+                          <span class="badge text-bg-warning border border-dark-subtle ms-1" data-test="product-preferences-match-item">
+                            {{ match.key ? (match.key | abpLocalization) : match.text }}
+                          </span>
+                        }
+                      </div>
+                      @if (evaluation.missingAllergens) {
+                        <div class="small mt-1">{{ '::Warning:MissingAllergens' | abpLocalization }}</div>
+                      }
+                      @if (evaluation.missingIngredients) {
+                        <div class="small mt-1">{{ '::Warning:MissingIngredients' | abpLocalization }}</div>
+                      }
+                      <div class="small mt-2" data-test="product-preferences-disclaimer">{{ '::Warning:Disclaimer' | abpLocalization }}</div>
+                    </div>
+                  }
+                  @case (preferenceStatuses.NotVerifiable) {
+                    <div class="alert alert-secondary mb-3" data-test="product-preferences-not-verifiable" role="status">
+                      <div class="fw-semibold">
+                        <i class="fa fa-question-circle me-1" aria-hidden="true"></i>{{ '::Warning:NotVerifiable' | abpLocalization }}
+                      </div>
+                      @if (evaluation.missingAllergens) {
+                        <div class="small mt-1">{{ '::Warning:MissingAllergens' | abpLocalization }}</div>
+                      }
+                      @if (evaluation.missingIngredients) {
+                        <div class="small mt-1">{{ '::Warning:MissingIngredients' | abpLocalization }}</div>
+                      }
+                      <div class="small mt-2" data-test="product-preferences-disclaimer">{{ '::Warning:Disclaimer' | abpLocalization }}</div>
+                    </div>
+                  }
+                  @case (preferenceStatuses.NoMatch) {
+                    <div class="alert alert-light border mb-3" data-test="product-preferences-no-match" role="status">
+                      <div>{{ '::Warning:NoMatch' | abpLocalization }}</div>
+                      <div class="small mt-1" data-test="product-preferences-disclaimer">{{ '::Warning:Disclaimer' | abpLocalization }}</div>
+                    </div>
+                  }
+                }
+              }
+
               <div class="d-flex flex-wrap align-items-center gap-2">
                 <button type="button" class="btn btn-primary" (click)="openAddToPantry()" data-test="product-add">
                   <i class="fa fa-plus me-1" aria-hidden="true"></i>{{ '::Product:AddToPantry' | abpLocalization }}

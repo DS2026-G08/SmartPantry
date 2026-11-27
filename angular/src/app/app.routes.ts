@@ -39,6 +39,13 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard],
   },
   {
+    // RF-03: preferencias alimentarias del usuario actual.
+    path: 'preferences',
+    loadComponent: () =>
+      import('./preferences/preferences.component').then(c => c.PreferencesComponent),
+    canActivate: [authGuard],
+  },
+  {
     path: 'books',
     loadComponent: () => import('./book/book.component').then(c => c.BookComponent),
     canActivate: [authGuard, permissionGuard],

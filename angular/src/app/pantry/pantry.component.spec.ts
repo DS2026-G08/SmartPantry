@@ -5,6 +5,7 @@ import { CoreTestingModule, LocalizationPipe as MockLocalizationPipe } from '@ab
 import { Confirmation, ConfirmationService, ToasterService } from '@abp/ng.theme.shared';
 import { ThemeSharedTestingModule } from '@abp/ng.theme.shared/testing';
 import { PantryItemDto, PantryItemService, PantryItemStatus } from '../proxy/pantries';
+import { PreferenceEvaluationStatus } from '../proxy/preferences';
 import { PantryComponent } from './pantry.component';
 
 // El servicio del proxy se reemplaza por un mock: las pruebas no dependen de la red.
@@ -116,6 +117,40 @@ describe('PantryComponent', () => {
     expect(rows[1].textContent).toContain('Arroz');
     expect(rows[1].textContent).toContain('::Pantry:NoExpirationDate');
     expect(rows[1].textContent).toContain('::Pantry:NoQuantity');
+  });
+
+  it('marca los ítems con advertencia o no verificables (RF-12)', () => {
+    pantryItemService.getList.and.returnValue(
+      of({
+        items: [
+          {
+            ...milk,
+            preferenceWarning: {
+              status: PreferenceEvaluationStatus.Match,
+              matchedAllergens: ['en:milk'],
+              matchedIngredients: ['azúcar'],
+            },
+          },
+          { ...rice, preferenceWarning: { status: PreferenceEvaluationStatus.NotVerifiable, missingIngredients: true } },
+        ],
+        totalCount: 2,
+      }),
+    );
+    setup();
+
+    const match = query('pantry-warning-match')!;
+    expect(match.textContent).toContain('::Warning:Review');
+    expect(match.textContent).toContain('::Allergen:milk');
+    expect(match.textContent).toContain('azúcar');
+    expect(query('pantry-warning-not-verifiable')?.textContent).toContain('::Warning:NotVerifiableBadge');
+  });
+
+  it('no marca nada si el servidor no envía advertencias (sin coincidencias o alertas apagadas)', () => {
+    pantryItemService.getList.and.returnValue(of({ items: [milk, rice], totalCount: 2 }));
+    setup();
+
+    expect(query('pantry-warning-match')).toBeNull();
+    expect(query('pantry-warning-not-verifiable')).toBeNull();
   });
 
   it('distingue los consumidos y los pide al activar el filtro', () => {

@@ -15,6 +15,7 @@ using Volo.Abp.PermissionManagement.EntityFrameworkCore;
 using Volo.Abp.SettingManagement.EntityFrameworkCore;
 using Volo.Abp.OpenIddict.EntityFrameworkCore;
 using SmartPantry.Pantries;
+using SmartPantry.Preferences;
 using SmartPantry.Products;
 
 namespace SmartPantry.EntityFrameworkCore;
@@ -36,6 +37,10 @@ public class SmartPantryDbContext :
     public DbSet<Pantry> Pantries { get; set; } = null!;
 
     public DbSet<PantryItemWarning> PantryItemWarnings { get; set; } = null!;
+
+    public DbSet<DietaryPreference> DietaryPreferences { get; set; } = null!;
+
+    public DbSet<PreferenceWarning> PreferenceWarnings { get; set; } = null!;
 
     #region Entities from the modules
 
@@ -193,6 +198,48 @@ public class SmartPantryDbContext :
             // Clave lógica: una sola advertencia por ítem y tipo, aunque dos ejecuciones se superpongan.
             b.HasIndex(x => new { x.PantryItemId, x.Type })
                 .IsUnique();
+        });
+
+        // Parte 2: preferencias alimentarias (RF-03) y advertencias informativas (RF-12)
+        builder.Entity<DietaryPreference>(b =>
+        {
+            b.ToTable(SmartPantryConsts.DbTablePrefix + "DietaryPreferences", SmartPantryConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            // Una sola fila de preferencias por usuario.
+            b.HasIndex(x => x.UserId).IsUnique();
+
+            b.Property(x => x.WatchedAllergens)
+                .IsRequired()
+                .HasMaxLength(DietaryPreferenceConsts.MaxWatchedAllergensLength);
+
+            b.Property(x => x.WatchedIngredients)
+                .IsRequired()
+                .HasMaxLength(DietaryPreferenceConsts.MaxWatchedIngredientsLength);
+        });
+
+        builder.Entity<PreferenceWarning>(b =>
+        {
+            b.ToTable(SmartPantryConsts.DbTablePrefix + "PreferenceWarnings", SmartPantryConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            // Si se elimina el ítem, su advertencia ya no tiene sentido.
+            b.HasOne<PantryItem>()
+                .WithMany()
+                .HasForeignKey(x => x.PantryItemId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Clave lógica: una sola advertencia de preferencias por ítem.
+            b.HasIndex(x => x.PantryItemId).IsUnique();
+
+            b.Property(x => x.MatchedAllergens)
+                .IsRequired()
+                .HasMaxLength(DietaryPreferenceConsts.MaxWatchedAllergensLength);
+
+            b.Property(x => x.MatchedIngredients)
+                .IsRequired()
+                .HasMaxLength(DietaryPreferenceConsts.MaxWatchedIngredientsLength);
         });
     }
 }

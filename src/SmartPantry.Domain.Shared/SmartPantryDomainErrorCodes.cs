@@ -15,4 +15,16 @@ public static class SmartPantryDomainErrorCodes
 
     /// <summary>El producto externo no informa nombre y el usuario tampoco lo indicó.</summary>
     public const string ExternalProductNameRequired = "SmartPantry:Products:ExternalProductNameRequired";
+
+    /// <summary>La etiqueta no está entre los 14 alérgenos que se pueden vigilar.</summary>
+    public const string UnknownAllergen = "SmartPantry:Preferences:UnknownAllergen";
+
+    /// <summary>Palabra de ingrediente vacía, muy corta o muy larga.</summary>
+    public const string InvalidIngredient = "SmartPantry:Preferences:InvalidIngredient";
+
+    /// <summary>La misma palabra de ingrediente aparece dos veces (sin distinguir mayúsculas ni acentos).</summary>
+    public const string DuplicateIngredient = "SmartPantry:Preferences:DuplicateIngredient";
+
+    /// <summary>Se superó la cantidad máxima de palabras de ingredientes.</summary>
+    public const string TooManyIngredients = "SmartPantry:Preferences:TooManyIngredients";
 }

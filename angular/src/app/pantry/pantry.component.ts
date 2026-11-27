@@ -21,6 +21,9 @@ import {
   PantryItemService,
   PantryItemStatus,
 } from '../proxy/pantries';
+import { PreferenceEvaluationStatus } from '../proxy/preferences';
+import { AllergenLabel } from '../shared/catalog';
+import { preferenceMatches } from '../shared/preference-warning';
 import { toDateStruct, toIsoDate, validDateValidator } from '../shared/calendar-date';
 
 // Mismo máximo que PantryItemConsts.MaxUnitLength en el BackEnd.
@@ -61,6 +64,7 @@ export class PantryComponent {
   private readonly fb = inject(FormBuilder);
 
   readonly statuses = PantryItemStatus;
+  readonly preferenceStatuses = PreferenceEvaluationStatus;
   readonly maxUnitLength = MAX_UNIT_LENGTH;
 
   readonly state = signal<PantryLoadState>('loading');
@@ -107,6 +111,11 @@ export class PantryComponent {
         this.totalCount.set(result.totalCount ?? 0);
         this.state.set('loaded');
       });
+  }
+
+  // RF-12: el servidor sólo envía la advertencia si el usuario tiene encendido "Mostrar alertas".
+  warningMatches(item: PantryItemDto): AllergenLabel[] {
+    return preferenceMatches(item.preferenceWarning);
   }
 
   retry() {

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using SmartPantry.Preferences;
 
 namespace SmartPantry.ExternalProducts;
 
@@ -28,4 +29,10 @@ public class ExternalProductLookupResultDto
 
     /// <summary>1 a 4, o null si no está informado.</summary>
     public int? NovaGroup { get; set; }
+
+    /// <summary>
+    /// RF-12, "al abrir": comparación con las preferencias del usuario actual. Se calcula en el momento
+    /// y no se guarda. Es null si el producto no se encontró o si el usuario apagó "Mostrar alertas".
+    /// </summary>
+    public PreferenceEvaluationDto? Preferences { get; set; }
 }
