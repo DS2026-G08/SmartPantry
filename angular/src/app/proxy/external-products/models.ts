@@ -1,4 +1,5 @@
 import type { ExternalProductLookupStatus } from './external-product-lookup-status.enum';
+import type { PreferenceEvaluationDto } from '../preferences/models';
 
 export interface ExternalProductLookupInputDto {
   barcode: string;
@@ -15,6 +16,7 @@ export interface ExternalProductLookupResultDto {
   allergens?: string[];
   nutriScore?: string | null;
   novaGroup?: number | null;
+  preferences?: PreferenceEvaluationDto | null;
 }
 
 export interface ExternalProductSearchInputDto {

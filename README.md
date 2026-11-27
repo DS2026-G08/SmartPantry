@@ -192,3 +192,61 @@ Cubre **HU-02** y **HU-03**: buscar un producto por código o por texto, ver su 
 - **Errores:** la búsqueda y el detalle usan `skipHandleError` y muestran su propio estado con "Reintentar". "Agregar" usa el manejo predeterminado de ABP, que muestra el mensaje del servidor, por ejemplo "Open Food Facts no está disponible", y deja el modal abierto con lo ingresado.
 
 **Base de datos:** la migración `AddProductCatalogDetails` agrega las columnas de RF-07, hace opcional la marca y crea el índice único. Si una base local ya tenía dos productos con el mismo código, la migración falla al crear el índice: hay que borrar o corregir el duplicado y volver a correr `SmartPantry.DbMigrator`.
+
+## 🧾 Preferencias y advertencias (Parte 2)
+
+Cubre **RF-03** y **RF-12** (HU-01, HU-04): cada usuario declara los alérgenos e ingredientes que quiere vigilar, y el sistema le avisa cuando un producto coincide o no se puede verificar. **Las advertencias son informativas: no son un diagnóstico ni consejo médico** (regla 1).
+
+| Funcionalidad | AppService y método | Endpoint | Proxy | Pantalla |
+|---|---|---|---|---|
+| RF-03 ver mis preferencias | `DietaryPreferenceAppService.GetAsync` | `GET /api/app/dietary-preference` | `DietaryPreferenceService.get` | Mis preferencias (`/preferences`) |
+| RF-03 guardar mis preferencias | `DietaryPreferenceAppService.UpdateAsync` | `PUT /api/app/dietary-preference` | `DietaryPreferenceService.update` | Mis preferencias → Guardar |
+| RF-12 al abrir un producto | `ExternalProductAppService.GetByBarcodeAsync` (campo `preferences`) | `GET /api/app/external-product/by-barcode` | `ExternalProductService.getByBarcode` | Detalle de producto |
+| RF-12 al agregar a la despensa | `PantryItemAppService.CreateAsync` (campo `preferenceWarning`) | `POST /api/app/pantry-item` | `PantryItemService.create` | Detalle → "Agregar a mi despensa" |
+| RF-12 en el listado | `PantryItemAppService.GetListAsync` (campo `preferenceWarning`) | `GET /api/app/pantry-item` | `PantryItemService.getList` | Mi despensa |
+
+**Regla de evaluación** (`PreferenceMatcher`, Domain)
+
+| Situación | Estado | Qué ve el usuario |
+|---|---|---|
+| No vigila nada | `NoPreferences` | Enlace "Configurar preferencias" |
+| Un alérgeno vigilado está en las etiquetas del producto, o una palabra vigilada aparece en los ingredientes | `Match` | Advertencia con cada coincidencia ("Contiene: Leche") |
+| Sin coincidencias, pero falta un dato necesario | `NotVerifiable` | "No se puede verificar" y qué dato falta |
+| Sin coincidencias y con todos los datos | `NoMatch` | "Sin coincidencias según los datos disponibles" (nunca "apto" ni "seguro") |
+
+- **Alérgenos:** se comparan etiquetas exactas (`en:milk` = `en:milk`). Sólo se pueden vigilar los 14 de `DietaryPreferenceConsts.KnownAllergenTags`, la misma lista que `KNOWN_ALLERGENS` en Angular. Un alérgeno vigilado sólo es verificable si el producto informa al menos un alérgeno: Open Food Facts devuelve la lista vacía tanto si no tiene como si nadie la cargó (regla 2).
+- **Palabras de ingredientes:** se buscan dentro del texto de ingredientes sin distinguir mayúsculas, acentos ni espacios repetidos ("azúcar" encuentra "AZUCAR"). Sólo son verificables si el producto tiene ingredientes.
+- **Una coincidencia gana:** si hay `Match` se informa aunque falten otros datos, y además se aclara qué no se pudo verificar.
+- Es una clase pura: no usa la base ni el usuario actual, así que se prueba con casos fijos.
+
+**Modelo**
+- `DietaryPreference` (agregado): una fila por usuario (**índice único en `UserId`**), con los alérgenos, las palabras (hasta 20, de 2 a 50 caracteres, sin repetir) y `ShowAlerts` (encendido por defecto).
+- `PreferenceWarning`: una advertencia por ítem de despensa (**índice único en `PantryItemId`**), con estado (`Match` o `NotVerifiable`), coincidencias, datos faltantes e `IsActive`. Igual que en el TP08, la misma fila se crea, se actualiza, se desactiva y se reactiva; nunca se duplica. Si se elimina el ítem, se elimina su advertencia.
+- Es una entidad aparte de `PantryItemWarning`, porque aquélla exige una fecha de vencimiento.
+- `PreferenceWarningManager` (Domain) decide qué advertencias crear, actualizar o desactivar.
+- Tablas nuevas: `AppDietaryPreferences`, `AppPreferenceWarnings` (migración `AddDietaryPreferencesAndWarnings`).
+
+**Cuándo se evalúa**
+- **Al abrir el detalle:** se calcula en el momento con los mismos datos que se muestran, y **no se guarda**, porque el producto puede no estar en la despensa.
+- **Al agregar a la despensa:** se guarda la advertencia del ítem nuevo.
+- **Al guardar las preferencias:** se recalculan las advertencias de todos los ítems del usuario. Los consumidos quedan sin advertencia activa.
+- **Al consumir un ítem:** su advertencia se desactiva.
+- **"Mostrar alertas" apagado:** las preferencias y las advertencias se siguen guardando, pero el servidor no envía `preferences` ni `preferenceWarning`, así que la UI no muestra avisos.
+
+**Acceso**
+- `DietaryPreferenceAppService` tiene `[Authorize]`: sin sesión ni token responde **401**.
+- Las preferencias **no reciben un id de usuario**: siempre son las de `ICurrentUser`. No hay forma de leer ni cambiar las de otro.
+- Al recalcular, sólo se tocan los ítems del usuario actual.
+
+**Validación:** el dominio rechaza, con mensajes localizados, etiquetas fuera de la lista de 14, palabras vacías, de menos de 2 o más de 50 caracteres, repetidas (sin distinguir mayúsculas ni acentos) o más de 20 palabras. La pantalla repite esas reglas por usabilidad y no agrega una palabra inválida.
+
+**Pantallas**
+- **Mis preferencias (`/preferences`):** requiere sesión (`authGuard`, menú visible sólo con sesión). Casillas con los 14 alérgenos, una lista de palabras para agregar y quitar, el interruptor "Mostrar alertas en pantalla" y el botón Guardar. Tiene estados de carga y de error con "Reintentar" (`skipHandleError`), y muestra siempre la leyenda de la regla 1.
+- **Detalle de producto:** debajo de los datos, un recuadro según el estado (advertencia, no verificable o sin coincidencias), siempre con la leyenda de la regla 1. Si el usuario no tiene preferencias, un enlace para configurarlas.
+- **Mi despensa:** una etiqueta "Revisar: Leche, azúcar" en los ítems con coincidencias, o "No verificable".
+
+**Proxies:** los de `@proxy/preferences` y los campos nuevos de `external-products` y `pantries` siguen el formato de `abp generate-proxy`. Con el Host corriendo, volver a ejecutar `abp generate-proxy -t ng` en `angular` actualiza también `generate-proxy.json`.
+
+**Base de datos:** correr `SmartPantry.DbMigrator` para crear las dos tablas nuevas.
+
+**Pruebas:** `PreferenceMatcherTests` y `DietaryPreferenceTests` (Domain), la evaluación al abrir en `ExternalProductAppService_Tests` (Application, sin base) y `DietaryPreferenceAppService_Tests` (EF Core: guardado, validación, aislamiento entre usuarios y advertencias sin duplicados). En Angular, `PreferencesComponent` y los casos nuevos de `ProductDetailComponent` y `PantryComponent`, con el proxy mockeado.

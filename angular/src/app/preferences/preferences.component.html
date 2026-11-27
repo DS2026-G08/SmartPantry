@@ -1,0 +1,147 @@
+<div class="card">
+  <div class="card-header">
+    <h5 class="card-title mb-0">{{ '::Menu:Preferences' | abpLocalization }}</h5>
+  </div>
+
+  <div class="card-body">
+    <!-- Regla 1: la limitación se muestra siempre, no sólo junto a una advertencia. -->
+    <div class="alert alert-info small" data-test="preferences-disclaimer" role="note">
+      <i class="fa fa-info-circle me-1" aria-hidden="true"></i>{{ '::Warning:Disclaimer' | abpLocalization }}
+    </div>
+
+    @switch (state()) {
+      @case ('loading') {
+        <div class="text-center text-muted py-4" data-test="preferences-loading" role="status">
+          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          {{ '::Preferences:Loading' | abpLocalization }}
+        </div>
+      }
+
+      @case ('error') {
+        <div
+          class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-2 mb-0"
+          data-test="preferences-error"
+          role="alert"
+        >
+          <span>{{ '::Preferences:LoadError' | abpLocalization }}</span>
+          <button type="button" class="btn btn-outline-danger btn-sm" (click)="load()" data-test="preferences-retry">
+            <i class="fa fa-redo me-1" aria-hidden="true"></i>{{ '::Pantry:Retry' | abpLocalization }}
+          </button>
+        </div>
+      }
+
+      @case ('loaded') {
+        <p class="text-muted">{{ '::Preferences:Intro' | abpLocalization }}</p>
+
+        <fieldset class="mb-4">
+          <legend class="fs-6 fw-semibold">{{ '::Preferences:Allergens' | abpLocalization }}</legend>
+          <div class="preferences__allergens" data-test="preferences-allergens">
+            @for (allergen of knownAllergens; track allergen) {
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  [id]="'allergen-' + allergen"
+                  [checked]="isSelected(allergen)"
+                  (change)="toggleAllergen(allergen, $any($event.target).checked)"
+                />
+                <label class="form-check-label" [for]="'allergen-' + allergen">
+                  {{ '::Allergen:' + allergen | abpLocalization }}
+                </label>
+              </div>
+            }
+          </div>
+        </fieldset>
+
+        <fieldset class="mb-4">
+          <legend class="fs-6 fw-semibold">{{ '::Preferences:Ingredients' | abpLocalization }}</legend>
+          <div class="input-group preferences__new-ingredient">
+            <input
+              type="text"
+              class="form-control"
+              id="preferences-new-ingredient"
+              data-test="preferences-new-ingredient"
+              [attr.aria-label]="'::Preferences:Ingredients' | abpLocalization"
+              [placeholder]="'::Preferences:IngredientPlaceholder' | abpLocalization"
+              [attr.maxlength]="maxIngredientLength"
+              [class.is-invalid]="ingredientError()"
+              [value]="newIngredient()"
+              [disabled]="isFull()"
+              (input)="setNewIngredient($any($event.target).value)"
+              (keydown.enter)="$event.preventDefault(); addIngredient()"
+            />
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              data-test="preferences-add-ingredient"
+              [disabled]="isFull()"
+              (click)="addIngredient()"
+            >
+              <i class="fa fa-plus me-1" aria-hidden="true"></i>{{ '::Preferences:AddIngredient' | abpLocalization }}
+            </button>
+          </div>
+          @switch (ingredientError()) {
+            @case ('invalid') {
+              <div class="invalid-feedback d-block" data-test="preferences-ingredient-error">
+                {{ '::Preferences:IngredientInvalid' | abpLocalization }}
+              </div>
+            }
+            @case ('duplicate') {
+              <div class="invalid-feedback d-block" data-test="preferences-ingredient-error">
+                {{ '::Preferences:IngredientDuplicate' | abpLocalization }}
+              </div>
+            }
+            @case ('tooMany') {
+              <div class="invalid-feedback d-block" data-test="preferences-ingredient-error">
+                {{ '::Preferences:TooManyIngredients' | abpLocalization }}
+              </div>
+            }
+          }
+          <div class="form-text">{{ '::Preferences:IngredientsHint' | abpLocalization }}</div>
+
+          <div class="mt-2" data-test="preferences-ingredients">
+            @for (word of ingredients(); track word) {
+              <span class="badge text-bg-light border me-1 mb-1 preferences__word" data-test="preferences-ingredient">
+                {{ word }}
+                <button
+                  type="button"
+                  class="btn-close btn-close-sm ms-1 align-middle"
+                  [attr.aria-label]="('::Preferences:RemoveIngredient' | abpLocalization) + ' ' + word"
+                  (click)="removeIngredient(word)"
+                ></button>
+              </span>
+            } @empty {
+              <span class="text-muted fst-italic small">{{ '::Preferences:NoIngredients' | abpLocalization }}</span>
+            }
+          </div>
+        </fieldset>
+
+        <div class="form-check form-switch mb-1">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            role="switch"
+            id="preferences-show-alerts"
+            data-test="preferences-show-alerts"
+            [checked]="showAlerts()"
+            (change)="showAlerts.set($any($event.target).checked)"
+          />
+          <label class="form-check-label" for="preferences-show-alerts">
+            {{ '::Preferences:ShowAlerts' | abpLocalization }}
+          </label>
+        </div>
+        <div class="form-text mb-4">{{ '::Preferences:ShowAlertsHint' | abpLocalization }}</div>
+
+        <abp-button
+          iconClass="fa fa-check"
+          data-test="preferences-save"
+          [loading]="isSaving()"
+          [disabled]="isSaving()"
+          (abpClick)="save()"
+        >
+          {{ '::Preferences:Save' | abpLocalization }}
+        </abp-button>
+      }
+    }
+  </div>
+</div>

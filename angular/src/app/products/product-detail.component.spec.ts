@@ -12,6 +12,7 @@ import {
   ExternalProductService,
 } from '../proxy/external-products';
 import { PantryItemService, PantryItemStatus } from '../proxy/pantries';
+import { PreferenceEvaluationStatus } from '../proxy/preferences';
 import { ProductService } from '../proxy/products';
 import { ProductDetailComponent } from './product-detail.component';
 
@@ -125,6 +126,82 @@ describe('ProductDetailComponent', () => {
     component.load();
     fixture.detectChanges();
     expect(query('product-detail-error')).not.toBeNull();
+  });
+
+  // ---------- RF-12: comparación con las preferencias al abrir el detalle ----------
+
+  it('muestra la advertencia con cada coincidencia y la leyenda de que no es un diagnóstico', () => {
+    externalProductService.getByBarcode.and.returnValue(
+      of({
+        ...milk,
+        preferences: {
+          status: PreferenceEvaluationStatus.Match,
+          matchedAllergens: ['en:milk'],
+          matchedIngredients: ['azúcar'],
+          missingAllergens: false,
+          missingIngredients: false,
+        },
+      }),
+    );
+    setup();
+
+    const box = query('product-preferences-match')!;
+    expect(box.textContent).toContain('::Warning:Match');
+    expect(box.textContent).toContain('::Allergen:milk');
+    expect(box.textContent).toContain('azúcar');
+    expect(box.textContent).toContain('::Warning:Disclaimer');
+    expect(query('product-preferences-not-verifiable')).toBeNull();
+  });
+
+  it('muestra "no verificable" con el dato que falta', () => {
+    externalProductService.getByBarcode.and.returnValue(
+      of({
+        ...milk,
+        ingredients: null,
+        preferences: {
+          status: PreferenceEvaluationStatus.NotVerifiable,
+          matchedAllergens: [],
+          matchedIngredients: [],
+          missingAllergens: false,
+          missingIngredients: true,
+        },
+      }),
+    );
+    setup();
+
+    const box = query('product-preferences-not-verifiable')!;
+    expect(box.textContent).toContain('::Warning:NotVerifiable');
+    expect(box.textContent).toContain('::Warning:MissingIngredients');
+    expect(box.textContent).not.toContain('::Warning:MissingAllergens');
+    expect(query('product-preferences-match')).toBeNull();
+  });
+
+  it('sin coincidencias no dice "apto": aclara que es según los datos disponibles', () => {
+    externalProductService.getByBarcode.and.returnValue(
+      of({ ...milk, preferences: { status: PreferenceEvaluationStatus.NoMatch } }),
+    );
+    setup();
+
+    expect(query('product-preferences-no-match')?.textContent).toContain('::Warning:NoMatch');
+  });
+
+  it('ofrece configurar las preferencias si el usuario no cargó ninguna', () => {
+    externalProductService.getByBarcode.and.returnValue(
+      of({ ...milk, preferences: { status: PreferenceEvaluationStatus.NoPreferences } }),
+    );
+    setup();
+
+    const link = query('product-preferences-none')!.querySelector('a')!;
+    expect(link.getAttribute('href')).toBe('/preferences');
+  });
+
+  it('no muestra nada si el usuario apagó "Mostrar alertas"', () => {
+    // El servidor no envía la evaluación cuando las alertas están apagadas.
+    externalProductService.getByBarcode.and.returnValue(of({ ...milk, preferences: null }));
+    setup();
+
+    expect(query('product-detail')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-test^="product-preferences"]')).toBeNull();
   });
 
   it('no consulta al servidor si el código no tiene un formato válido', () => {

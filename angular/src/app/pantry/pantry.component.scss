@@ -18,6 +18,12 @@
   }
 }
 
+.pantry-item__warning {
+  white-space: normal;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
 .pantry-item--consumed {
   opacity: 0.7;
 }

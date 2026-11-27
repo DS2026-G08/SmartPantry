@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
+using System.Linq;
 using NSubstitute;
+using SmartPantry.Preferences;
 using Shouldly;
 using Xunit;
 
@@ -14,12 +16,56 @@ public class ExternalProductAppService_Tests
     private const string Barcode = "3017620422003";
 
     private readonly IExternalProductCatalogClient _catalogClient;
+    private readonly IPreferenceEvaluator _preferenceEvaluator;
     private readonly ExternalProductAppService _appService;
 
     public ExternalProductAppService_Tests()
     {
         _catalogClient = Substitute.For<IExternalProductCatalogClient>();
-        _appService = new ExternalProductAppService(_catalogClient);
+        _preferenceEvaluator = Substitute.For<IPreferenceEvaluator>();
+        _appService = new ExternalProductAppService(_catalogClient, _preferenceEvaluator);
+    }
+
+    // ---------- Parte 2: evaluación con las preferencias al abrir el detalle (RF-12) ----------
+
+    [Fact]
+    public async Task Should_Include_The_Preference_Evaluation_Of_The_Shown_Data()
+    {
+        _catalogClient.GetByBarcodeAsync(Barcode).Returns(Task.FromResult<ExternalProductDto?>(
+            new ExternalProductDto
+            {
+                Barcode = Barcode,
+                Name = "Nutella",
+                Ingredients = " Azúcar, avellanas, leche ",
+                AllergenTags = new() { "en:milk", "es:Contiene leche", "en:nuts" }
+            }));
+        var evaluation = new PreferenceEvaluationDto
+        {
+            Status = PreferenceEvaluationStatus.Match,
+            MatchedAllergens = new() { "en:milk" }
+        };
+        _preferenceEvaluator
+            .EvaluateForCurrentUserAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string?>())
+            .Returns(Task.FromResult<PreferenceEvaluationDto?>(evaluation));
+
+        var result = await _appService.GetByBarcodeAsync(new ExternalProductLookupInputDto { Barcode = Barcode });
+
+        result.Preferences.ShouldBeSameAs(evaluation);
+        // Se compara con los datos ya normalizados: los mismos que ve el usuario en pantalla.
+        await _preferenceEvaluator.Received(1).EvaluateForCurrentUserAsync(
+            Arg.Is<IEnumerable<string>>(tags => tags.SequenceEqual(new[] { "en:milk", "en:nuts" })),
+            "Azúcar, avellanas, leche");
+    }
+
+    [Fact]
+    public async Task Should_Not_Evaluate_Preferences_When_The_Product_Is_Not_Found()
+    {
+        _catalogClient.GetByBarcodeAsync(Barcode).Returns(Task.FromResult<ExternalProductDto?>(null));
+
+        var result = await _appService.GetByBarcodeAsync(new ExternalProductLookupInputDto { Barcode = Barcode });
+
+        result.Preferences.ShouldBeNull();
+        await _preferenceEvaluator.DidNotReceiveWithAnyArgs().EvaluateForCurrentUserAsync(default!, default);
     }
 
     [Fact]

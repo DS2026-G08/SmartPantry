@@ -68,6 +68,23 @@
                       <div class="small text-muted pantry-item__name">{{ item.productBrand }}</div>
                     }
 
+                    @if (item.preferenceWarning; as warning) {
+                      <div class="mt-1" [title]="'::Warning:Disclaimer' | abpLocalization">
+                        @if (warning.status === preferenceStatuses.Match) {
+                          <span class="badge text-bg-warning pantry-item__warning" data-test="pantry-warning-match">
+                            <i class="fa fa-exclamation-triangle me-1" aria-hidden="true"></i>{{ '::Warning:Review' | abpLocalization }}
+                            @for (match of warningMatches(item); track match.text; let last = $last) {
+                              {{ match.key ? (match.key | abpLocalization) : match.text }}{{ last ? '' : ',' }}
+                            }
+                          </span>
+                        } @else if (warning.status === preferenceStatuses.NotVerifiable) {
+                          <span class="badge text-bg-secondary pantry-item__warning" data-test="pantry-warning-not-verifiable">
+                            <i class="fa fa-question-circle me-1" aria-hidden="true"></i>{{ '::Warning:NotVerifiableBadge' | abpLocalization }}
+                          </span>
+                        }
+                      </div>
+                    }
+
                     <dl class="pantry-item__details small mb-0 mt-2">
                       <dt>{{ '::Pantry:ExpirationDate' | abpLocalization }}</dt>
                       <dd>

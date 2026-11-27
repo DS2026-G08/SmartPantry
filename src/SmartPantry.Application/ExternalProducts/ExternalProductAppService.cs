@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using SmartPantry.Preferences;
 using SmartPantry.Products;
 
 namespace SmartPantry.ExternalProducts;
@@ -17,11 +18,16 @@ public class ExternalProductAppService : SmartPantryAppService, IExternalProduct
     public const int MaxNavigableResults = 1000;
 
     private readonly IExternalProductCatalogClient _catalogClient;
+    private readonly IPreferenceEvaluator _preferenceEvaluator;
 
-    // Depende sólo de la interfaz: no conoce HttpClient, rutas, encabezados ni el JSON del proveedor.
-    public ExternalProductAppService(IExternalProductCatalogClient catalogClient)
+    // Depende sólo de interfaces: no conoce HttpClient, rutas, encabezados ni el JSON del proveedor,
+    // ni cómo se guardan las preferencias del usuario.
+    public ExternalProductAppService(
+        IExternalProductCatalogClient catalogClient,
+        IPreferenceEvaluator preferenceEvaluator)
     {
         _catalogClient = catalogClient;
+        _preferenceEvaluator = preferenceEvaluator;
     }
 
     public async Task<ExternalProductLookupResultDto> GetByBarcodeAsync(ExternalProductLookupInputDto input)
@@ -37,6 +43,9 @@ public class ExternalProductAppService : SmartPantryAppService, IExternalProduct
                 return WithoutProduct(barcode, ExternalProductLookupStatus.NotFound);
             }
 
+            var allergens = CatalogValues.NormalizeAllergenTags(product.AllergenTags);
+            var ingredients = NullIfBlank(product.Ingredients);
+
             return new ExternalProductLookupResultDto
             {
                 Status = ExternalProductLookupStatus.Found,
@@ -45,10 +54,12 @@ public class ExternalProductAppService : SmartPantryAppService, IExternalProduct
                 Brand = NullIfBlank(product.Brand),
                 ImageUrl = NullIfBlank(product.ImageUrl),
                 Categories = NullIfBlank(product.Categories),
-                Ingredients = NullIfBlank(product.Ingredients),
-                Allergens = CatalogValues.NormalizeAllergenTags(product.AllergenTags),
+                Ingredients = ingredients,
+                Allergens = allergens,
                 NutriScore = CatalogValues.NormalizeNutriScore(product.NutriScore),
-                NovaGroup = CatalogValues.NormalizeNovaGroup(product.NovaGroup)
+                NovaGroup = CatalogValues.NormalizeNovaGroup(product.NovaGroup),
+                // RF-12 "al abrir": se compara con los mismos datos que ve el usuario, sin guardar nada.
+                Preferences = await _preferenceEvaluator.EvaluateForCurrentUserAsync(allergens, ingredients)
             };
         }
         catch (ExternalCatalogRateLimitException)

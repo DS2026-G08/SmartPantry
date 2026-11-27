@@ -13,10 +13,12 @@ import {
   ExternalProductService,
 } from '../proxy/external-products';
 import { PantryItemService } from '../proxy/pantries';
+import { PreferenceEvaluationDto, PreferenceEvaluationStatus } from '../proxy/preferences';
 import { ProductService } from '../proxy/products';
 import { MAX_UNIT_LENGTH } from '../pantry/pantry.component';
 import { toIsoDate, validDateValidator } from '../shared/calendar-date';
 import { allergenLabel, AllergenLabel, BARCODE_PATTERN } from '../shared/catalog';
+import { preferenceMatches } from '../shared/preference-warning';
 
 export type ProductDetailState = 'loading' | 'error' | 'rateLimited' | 'notFound' | 'loaded';
 
@@ -60,6 +62,11 @@ export class ProductDetailComponent {
   readonly state = signal<ProductDetailState>('loading');
   readonly product = signal<ExternalProductLookupResultDto | undefined>(undefined);
   readonly allergens = signal<AllergenLabel[]>([]);
+
+  // RF-12 "al abrir": null si el usuario apagó "Mostrar alertas" (no se muestra nada).
+  readonly preferenceStatuses = PreferenceEvaluationStatus;
+  readonly preferences = signal<PreferenceEvaluationDto | null>(null);
+  readonly preferenceMatches = signal<AllergenLabel[]>([]);
 
   readonly isModalOpen = signal(false);
   readonly isSaving = signal(false);
@@ -108,6 +115,8 @@ export class ProductDetailComponent {
       .subscribe(result => {
         this.product.set(result);
         this.allergens.set((result.allergens ?? []).map(allergenLabel));
+        this.preferences.set(result.preferences ?? null);
+        this.preferenceMatches.set(preferenceMatches(result.preferences));
         this.state.set(this.toState(result.status));
       });
   }
