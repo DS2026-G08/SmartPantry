@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using SmartPantry.ExternalProducts;
 using SmartPantry.Localization;
+using SmartPantry.Pantries;
+using SmartPantry.Permissions;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -12,6 +14,8 @@ using Volo.Abp.Domain.Repositories;
 namespace SmartPantry.Products;
 
 // RF-08 (guardado interno). TP09: requiere un usuario autenticado; cualquier usuario común puede consultar y guardar.
+// El catálogo es compartido: editar o eliminar un producto cambia las despensas de todos, así que
+// esas dos operaciones requieren permisos de administración del catálogo.
 [Authorize]
 public class ProductAppService :
     CrudAppService<
@@ -24,14 +28,21 @@ public class ProductAppService :
     IProductAppService
 {
     private readonly IExternalProductCatalogClient _catalogClient;
+    private readonly IRepository<Pantry, Guid> _pantryRepository;
 
     public ProductAppService(
         IRepository<Product, Guid> repository,
-        IExternalProductCatalogClient catalogClient)
+        IExternalProductCatalogClient catalogClient,
+        IRepository<Pantry, Guid> pantryRepository)
         : base(repository)
     {
         _catalogClient = catalogClient;
+        _pantryRepository = pantryRepository;
         LocalizationResource = typeof(SmartPantryResource);
+
+        // Consultar y dar de alta: cualquier usuario autenticado (lo exige [Authorize] de la clase).
+        UpdatePolicyName = SmartPantryPermissions.Products.Edit;
+        DeletePolicyName = SmartPantryPermissions.Products.Delete;
     }
 
     public async Task<ProductDto> SaveFromExternalAsync(SaveExternalProductDto input)
@@ -103,6 +114,22 @@ public class ProductAppService :
     {
         entity.Update(updateInput.Name, updateInput.Brand, updateInput.Barcode);
         await CheckBarcodeIsFreeAsync(entity.Barcode, entity.Id);
+    }
+
+    // ELIMINAR (adaptado): la base ya impide borrar un producto en uso (FK con Restrict), pero eso
+    // llegaría como un error 500. Esta validación da un mensaje comprensible antes de intentarlo.
+    protected override async Task DeleteByIdAsync(Guid id)
+    {
+        var pantries = await _pantryRepository.GetQueryableAsync();
+        var isInUse = await AsyncExecuter.AnyAsync(
+            pantries.SelectMany(p => p.Items).Where(i => i.ProductId == id));
+
+        if (isInUse)
+        {
+            throw new BusinessException(SmartPantryDomainErrorCodes.ProductInUse);
+        }
+
+        await base.DeleteByIdAsync(id);
     }
 
     // LISTAR (adaptado): orden por defecto cuando el cliente no manda "Sorting".

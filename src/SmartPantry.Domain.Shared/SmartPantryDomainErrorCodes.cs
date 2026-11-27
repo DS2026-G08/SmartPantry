@@ -15,4 +15,7 @@ public static class SmartPantryDomainErrorCodes
 
     /// <summary>El producto externo no informa nombre y el usuario tampoco lo indicó.</summary>
     public const string ExternalProductNameRequired = "SmartPantry:Products:ExternalProductNameRequired";
+
+    /// <summary>El producto está en alguna despensa y no se puede eliminar.</summary>
+    public const string ProductInUse = "SmartPantry:Products:ProductInUse";
 }

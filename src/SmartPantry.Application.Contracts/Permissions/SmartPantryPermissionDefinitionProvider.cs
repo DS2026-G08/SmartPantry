@@ -20,6 +20,10 @@ public class SmartPantryPermissionDefinitionProvider : PermissionDefinitionProvi
         authorsPermission.AddChild(SmartPantryPermissions.Authors.Create, L("Permission:Authors.Create"));
         authorsPermission.AddChild(SmartPantryPermissions.Authors.Edit, L("Permission:Authors.Edit"));
         authorsPermission.AddChild(SmartPantryPermissions.Authors.Delete, L("Permission:Authors.Delete"));
+
+        var productsPermission = myGroup.AddPermission(SmartPantryPermissions.Products.Default, L("Permission:Products"));
+        productsPermission.AddChild(SmartPantryPermissions.Products.Edit, L("Permission:Products.Edit"));
+        productsPermission.AddChild(SmartPantryPermissions.Products.Delete, L("Permission:Products.Delete"));
         //Define your own permissions here. Example:
         //myGroup.AddPermission(SmartPantryPermissions.MyPermission1, L("Permission:MyPermission1"));
     }

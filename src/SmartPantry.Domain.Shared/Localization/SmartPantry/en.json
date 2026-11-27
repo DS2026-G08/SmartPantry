@@ -43,6 +43,9 @@
     "Permission:Authors.Create": "Creating new authors",
     "Permission:Authors.Edit": "Editing the authors",
     "Permission:Authors.Delete": "Deleting the authors",
+    "Permission:Products": "Product catalog management",
+    "Permission:Products.Edit": "Editing products",
+    "Permission:Products.Delete": "Deleting products",
     "Menu:Home": "Home",
     "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information visit",
     "Welcome": "Welcome",
@@ -123,6 +126,7 @@
     "SmartPantry:Products:DuplicateBarcode": "There is already a product with barcode {Barcode}.",
     "SmartPantry:Products:ExternalProductNotFound": "Open Food Facts has no product with barcode {Barcode}.",
     "SmartPantry:Products:ExternalCatalogUnavailable": "Open Food Facts is not available right now. Please try again in a few minutes.",
-    "SmartPantry:Products:ExternalProductNameRequired": "Open Food Facts doesn't provide a name for this product. Enter one to save it."
+    "SmartPantry:Products:ExternalProductNameRequired": "Open Food Facts doesn't provide a name for this product. Enter one to save it.",
+    "SmartPantry:Products:ProductInUse": "The product can't be deleted because it is in a pantry."
   }
 }

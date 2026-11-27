@@ -10,6 +10,9 @@
     "LongWelcomeMessage": "Bienvenido a la aplicacion. Este es un proyecto de inicio basado en el marco ABP. Para obtener mas informacion, visite",
     "Date": "Fecha",
     "Permission:Dashboard": "Panel de control",
+    "Permission:Products": "Administración del catálogo de productos",
+    "Permission:Products.Edit": "Editar productos",
+    "Permission:Products.Delete": "Eliminar productos",
     "Menu:Dashboard": "Panel de control",
     "Menu:HomePage": "Página de inicio",
     "Dashboard": "Panel de control",
@@ -115,6 +118,7 @@
     "SmartPantry:Products:DuplicateBarcode": "Ya existe un producto con el código de barras {Barcode}.",
     "SmartPantry:Products:ExternalProductNotFound": "Open Food Facts no tiene un producto con el código {Barcode}.",
     "SmartPantry:Products:ExternalCatalogUnavailable": "Open Food Facts no está disponible en este momento. Intentá de nuevo en unos minutos.",
-    "SmartPantry:Products:ExternalProductNameRequired": "Open Food Facts no informa el nombre de este producto. Escribí uno para guardarlo."
+    "SmartPantry:Products:ExternalProductNameRequired": "Open Food Facts no informa el nombre de este producto. Escribí uno para guardarlo.",
+    "SmartPantry:Products:ProductInUse": "No se puede eliminar el producto porque está en alguna despensa."
   }
 }

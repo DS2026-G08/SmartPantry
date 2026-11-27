@@ -2,7 +2,12 @@
 using Shouldly;
 using SmartPantry.EntityFrameworkCore;
 using SmartPantry.ExternalProducts;
+using SmartPantry.Pantries;
+using SmartPantry.Permissions;
 using Volo.Abp;
+using Volo.Abp.Authorization.Permissions;
+using Volo.Abp.DependencyInjection;
+using Volo.Abp.Domain.Repositories;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -260,5 +265,73 @@ public class ProductAppService_Tests : SmartPantryEntityFrameworkCoreTestBase
         unavailable.Code.ShouldBe(SmartPantryDomainErrorCodes.ExternalCatalogUnavailable);
 
         (await _productAppService.GetListAsync(new PagedAndSortedResultRequestDto())).TotalCount.ShouldBe(0);
+    }
+
+    // ---------- Permisos del catálogo compartido ----------
+
+    [Fact]
+    public async Task Should_Define_The_Product_Edit_And_Delete_Permissions()
+    {
+        var permissions = GetRequiredService<IPermissionDefinitionManager>();
+
+        (await permissions.GetOrNullAsync(SmartPantryPermissions.Products.Edit)).ShouldNotBeNull();
+        (await permissions.GetOrNullAsync(SmartPantryPermissions.Products.Delete)).ShouldNotBeNull();
+    }
+
+    // Las pruebas usan AlwaysAllowAuthorizationService, así que no pueden comprobar un 403.
+    // Lo que sí se comprueba es qué permiso exige cada operación.
+    [Fact]
+    public void Should_Require_Permissions_Only_To_Edit_And_Delete()
+    {
+        var service = new PolicyProbe(
+            Substitute.For<IRepository<Product, Guid>>(),
+            Substitute.For<IExternalProductCatalogClient>(),
+            Substitute.For<IRepository<Pantry, Guid>>());
+
+        service.Update.ShouldBe(SmartPantryPermissions.Products.Edit);
+        service.Delete.ShouldBe(SmartPantryPermissions.Products.Delete);
+
+        // Consultar y dar de alta sólo requieren sesión ([Authorize] de la clase).
+        service.Get.ShouldBeNull();
+        service.GetList.ShouldBeNull();
+        service.Create.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Should_Not_Delete_A_Product_That_Is_In_A_Pantry()
+    {
+        var product = await _productAppService.CreateAsync(new CreateProductDto { Name = "Fideos" });
+        var pantryRepository = GetRequiredService<IRepository<Pantry, Guid>>();
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var pantry = new Pantry(Guid.NewGuid(), Guid.NewGuid(), "Despensa de otro usuario");
+            pantry.AddItem(Guid.NewGuid(), product.Id, null);
+            await pantryRepository.InsertAsync(pantry);
+        });
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => _productAppService.DeleteAsync(product.Id));
+
+        ex.Code.ShouldBe(SmartPantryDomainErrorCodes.ProductInUse);
+        (await _productAppService.GetAsync(product.Id)).Name.ShouldBe("Fideos");
+    }
+
+    // Se construye a mano: no tiene que entrar en el contenedor de dependencias de ABP.
+    [DisableConventionalRegistration]
+    private sealed class PolicyProbe : ProductAppService
+    {
+        public PolicyProbe(
+            IRepository<Product, Guid> repository,
+            IExternalProductCatalogClient catalogClient,
+            IRepository<Pantry, Guid> pantryRepository)
+            : base(repository, catalogClient, pantryRepository)
+        {
+        }
+
+        public string? Get => GetPolicyName;
+        public string? GetList => GetListPolicyName;
+        public string? Create => CreatePolicyName;
+        public string? Update => UpdatePolicyName;
+        public string? Delete => DeletePolicyName;
     }
 }

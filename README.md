@@ -179,6 +179,13 @@ Cubre **HU-02** y **HU-03**: buscar un producto por código o por texto, ver su 
 - **Alérgenos:** se guardan las etiquetas canónicas de Open Food Facts (`en:milk`), porque son las que se compararán con las preferencias del usuario. El texto libre cargado por usuarios del proveedor, como `es:Contiene leche`, se descarta. Una lista vacía se muestra como "No informados (eso no significa que no tenga)".
 - Los textos de terceros que superan el largo de la columna se recortan en lugar de rechazar el producto.
 
+**Permisos del catálogo**
+- El catálogo de productos es compartido: un mismo producto puede estar en las despensas de varios usuarios.
+- Consultar, dar de alta y guardar desde Open Food Facts sólo requiere sesión.
+- **Editar** (`PUT /api/app/product/{id}`) requiere `SmartPantry.Products.Edit` y **eliminar** (`DELETE /api/app/product/{id}`) requiere `SmartPantry.Products.Delete`. Sin ese permiso responden **403**. Por defecto los tiene sólo el rol `admin`.
+- Un producto que está en alguna despensa no se puede eliminar: responde un mensaje localizado en lugar de un error de base de datos.
+- En una base local ya creada, hay que volver a correr `SmartPantry.DbMigrator` para que el rol `admin` reciba los permisos nuevos.
+
 **Guardado sin duplicados (RF-08, regla de negocio 4)**
 - `AppProducts.Barcode` tiene un **índice único filtrado**: los productos sin código no tienen restricción. El alta y la edición manual validan el código antes de guardar y responden un mensaje localizado si ya existe.
 - `SaveFromExternalAsync` recibe **sólo el código**: el servidor vuelve a consultar Open Food Facts y guarda lo que obtiene, sin confiar en datos armados por el navegador.
